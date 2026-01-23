@@ -18,6 +18,12 @@ function App() {
   useLayoutEffect(() => {
     // Create a GSAP context for clean scoping
     const ctx = gsap.context(() => {
+      // Helper function to get viewport-relative values
+      const getViewportValues = () => ({
+        vw: containerRef.current.offsetWidth,
+        vh: containerRef.current.offsetHeight
+      })
+
       // Create the main timeline with ScrollTrigger
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -27,14 +33,15 @@ function App() {
           pin: true,
           scrub: 1, // Smooth scrubbing
           markers: false, // Set to true for debugging
+          invalidateOnRefresh: true, // Recalculate values on resize
         }
       })
 
       // Logo animation: large centered → small top-left
       tl.to(logoRef.current, {
         scale: 0.4,
-        x: -window.innerWidth * 0.35, // Move to left
-        y: -window.innerHeight * 0.35, // Move to top
+        x: () => -getViewportValues().vw * 0.35, // Move to left
+        y: () => -getViewportValues().vh * 0.35, // Move to top
         duration: 1,
       }, 0)
 
@@ -47,8 +54,8 @@ function App() {
 
       // Menu adjustments: position and spacing
       tl.to(menuRef.current, {
-        x: window.innerWidth * 0.2, // Move to right
-        y: -window.innerHeight * 0.35, // Move to top
+        x: () => getViewportValues().vw * 0.2, // Move to right
+        y: () => -getViewportValues().vh * 0.35, // Move to top
         scale: 0.9,
         duration: 1,
       }, 0)
