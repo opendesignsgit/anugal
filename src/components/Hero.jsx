@@ -15,6 +15,10 @@ const Hero = () => {
   const curveRef = useRef(null);
 
   useEffect(() => {
+    // Store viewport dimensions to avoid layout thrashing
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
     const ctx = gsap.context(() => {
       // Create a timeline for all animations
       const tl = gsap.timeline({
@@ -31,15 +35,15 @@ const Hero = () => {
       // Early scroll: Logo shrinks and moves to top-left
       tl.to(logoRef.current, {
         scale: 0.5,
-        x: -window.innerWidth * 0.35,
-        y: -window.innerHeight * 0.4,
+        x: -vw * 0.35,
+        y: -vh * 0.4,
         duration: 0.3,
       }, 0);
 
       // Early scroll: Menu compacts and becomes navigation bar
       tl.to(menuRef.current, {
-        x: window.innerWidth * 0.15,
-        y: -window.innerHeight * 0.4,
+        x: vw * 0.15,
+        y: -vh * 0.4,
         scale: 0.9,
         duration: 0.3,
       }, 0);
@@ -47,23 +51,23 @@ const Hero = () => {
       // Midway: Headline reduces and shifts left
       tl.to(headlineRef.current, {
         scale: 0.6,
-        x: -window.innerWidth * 0.25,
-        y: window.innerHeight * 0.05,
+        x: -vw * 0.25,
+        y: vh * 0.05,
         duration: 0.4,
       }, 0.2);
 
       // Midway: Text content becomes left-aligned
       tl.to(textContentRef.current, {
-        x: -window.innerWidth * 0.25,
-        y: window.innerHeight * 0.2,
+        x: -vw * 0.25,
+        y: vh * 0.2,
         scale: 0.9,
         duration: 0.4,
       }, 0.3);
 
       // Late scroll: Dashboard image slides right and scales down
       tl.to(imageRef.current, {
-        x: window.innerWidth * 0.15,
-        y: window.innerHeight * 0.1,
+        x: vw * 0.15,
+        y: vh * 0.1,
         scale: 0.7,
         duration: 0.4,
       }, 0.4);
