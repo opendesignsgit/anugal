@@ -27,7 +27,7 @@ function ScrollAnimationDemo() {
           scrub: true, // Smooth scrubbing effect
           pin: true, // Pin the container during scroll
           anticipatePin: 1,
-          markers: false, // Set to true for debugging
+          markers: import.meta.env.DEV && false, // Enable for debugging: change false to true
         },
       });
 
