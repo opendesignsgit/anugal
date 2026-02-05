@@ -231,9 +231,39 @@ function runTests() {
         // For 250 employees: ceil(250/100) * 2 = 3 * 2 = 6
         const expectedTickets = 6;
         assertEquals(result.raw.inputs.daily_access_tickets, expectedTickets, 0);
-        console.log('✓ Daily tickets auto-calculated correctly');
+        console.log('✓ Daily tickets auto-calculated correctly (250 employees)');
         
-        passed++;
+        // Edge case: exactly 100 employees
+        const result100 = calculator.calculate({
+            region: 'EU',
+            employee_count: 100,
+            connected_apps: 2,
+            daily_tickets: ''
+        });
+        assertEquals(result100.raw.inputs.daily_access_tickets, 2, 0);
+        console.log('✓ Daily tickets correct for 100 employees (boundary)');
+        
+        // Edge case: 1 employee
+        const result1 = calculator.calculate({
+            region: 'EU',
+            employee_count: 1,
+            connected_apps: 1,
+            daily_tickets: ''
+        });
+        assertEquals(result1.raw.inputs.daily_access_tickets, 2, 0);
+        console.log('✓ Daily tickets correct for 1 employee (minimum)');
+        
+        // Edge case: large company
+        const resultLarge = calculator.calculate({
+            region: 'EU',
+            employee_count: 10000,
+            connected_apps: 10,
+            daily_tickets: ''
+        });
+        assertEquals(resultLarge.raw.inputs.daily_access_tickets, 200, 0);
+        console.log('✓ Daily tickets correct for 10,000 employees (large)');
+        
+        passed += 4;
     } catch (e) {
         console.error('✗ Test failed:', e.message);
         failed++;

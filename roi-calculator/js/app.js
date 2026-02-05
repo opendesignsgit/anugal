@@ -230,7 +230,7 @@ function generateCSVReport(reportData) {
     csv += `% Audit-Only Identities,${(inputs.cli_percent * 100).toFixed(1)}%\n`;
     csv += `Access Review Cycles/Year,${inputs.review_cycles_per_year}\n`;
     csv += `Days per Review Cycle,${inputs.days_per_review}\n`;
-    csv += `Daily Access Tickets,${inputs.daily_access_tickets || 'Auto-calculated'}\n\n`;
+    csv += `Daily Access Tickets,${inputs.daily_access_tickets}\n\n`;
     
     // Results
     csv += 'Results\n';

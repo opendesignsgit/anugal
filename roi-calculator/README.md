@@ -205,8 +205,8 @@ All visual styling is in `css/styles.css`. The design follows the reference imag
    - Annual subscription: ~€17,703 (~$19,119)
    - Implementation: €25,000 ($27,000)
    - Hours saved: ~854 hours/year
-   - Year 1 ROI: ~0%
-   - 3-Year ROI: ~105%
+   - Year 1 ROI: ~0% (near break-even)
+   - 3-Year ROI: ~64%
 
 2. **Validation Tests**:
    - Enter negative employee count → Error message
