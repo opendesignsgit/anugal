@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anugal ROI Calculator</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-section">
+            <h1 class="form-title">Company <span class="highlight">Profile</span></h1>
+            
+            <form id="roiForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Name<span class="required">*</span></label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number<span class="required">*</span></label>
+                        <input type="tel" id="phone" name="phone" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Work Email<span class="required">*</span></label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="company">Company Name<span class="required">*</span></label>
+                        <input type="text" id="company" name="company" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="region">Region<span class="required">*</span></label>
+                        <select id="region" name="region" required>
+                            <option value="">Select Region</option>
+                            <option value="EU">Europe</option>
+                            <option value="US">United States</option>
+                            <option value="APAC">Asia Pacific</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="employee_count">Total Number of Employees<span class="required">*</span></label>
+                        <input type="number" id="employee_count" name="employee_count" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="connected_apps">No. of Applications you want to Govern<span class="required">*</span></label>
+                        <input type="number" id="connected_apps" name="connected_apps" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="am_percent">% of People Who Operate or Approve Access<span class="required">*</span></label>
+                        <input type="number" id="am_percent" name="am_percent" min="0" max="100" step="0.1" placeholder="10">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cli_percent">% of Identities Tracked for Audit only<span class="required">*</span></label>
+                        <input type="number" id="cli_percent" name="cli_percent" min="0" max="100" step="0.1" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="review_cycles">How often do you Run Access Reviews?<span class="required">*</span></label>
+                        <select id="review_cycles" name="review_cycles">
+                            <option value="">Select Frequency</option>
+                            <option value="1">Annually (1x per year)</option>
+                            <option value="2" selected>Semi-Annually (2x per year)</option>
+                            <option value="4">Quarterly (4x per year)</option>
+                            <option value="12">Monthly (12x per year)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="days_per_review">Approximate Days Spent Per Access Review Cycle<span class="required">*</span></label>
+                        <input type="number" id="days_per_review" name="days_per_review" min="1" max="30" placeholder="7">
+                    </div>
+                    <div class="form-group">
+                        <label for="daily_tickets">Approximate No. of Access related Tickets Per Day<span class="required">*</span></label>
+                        <input type="number" id="daily_tickets" name="daily_tickets" min="0" step="0.1" placeholder="Auto-calculated">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">CALCULATE ROI</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="results-section">
+            <div class="results-card">
+                <div class="result-item">
+                    <div class="result-value" id="operational_efficiency">$0</div>
+                    <div class="result-label">Operational Efficiency<br>Gained</div>
+                </div>
+                <div class="result-divider"></div>
+                
+                <div class="result-item">
+                    <div class="result-value" id="subscription_cost">$0</div>
+                    <div class="result-label">Subscription Cost<br>(Annual)</div>
+                </div>
+                <div class="result-divider"></div>
+                
+                <div class="result-item">
+                    <div class="result-value" id="implementation_cost">$0</div>
+                    <div class="result-label">Implementation Cost<br>(One-Time)</div>
+                </div>
+                <div class="result-divider"></div>
+                
+                <div class="result-item">
+                    <div class="result-value" id="roi_year1">$0</div>
+                    <div class="result-label">Return on Investment<br>Year 1</div>
+                </div>
+                <div class="result-divider"></div>
+                
+                <div class="result-item">
+                    <div class="result-value" id="roi_3year">$0</div>
+                    <div class="result-label">Return on Investment<br>3 Years</div>
+                </div>
+
+                <div class="download-section">
+                    <button type="button" class="btn-download" id="downloadReport" disabled>
+                        <span class="download-icon">→</span>
+                        DOWNLOAD REPORT
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Report Modal -->
+    <div id="downloadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Download ROI Report</h2>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="downloadForm">
+                    <div class="form-group">
+                        <label for="report_name">Name<span class="required">*</span></label>
+                        <input type="text" id="report_name" name="report_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="report_email">Work Email<span class="required">*</span></label>
+                        <input type="email" id="report_email" name="report_email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="report_company">Company<span class="required">*</span></label>
+                        <input type="text" id="report_company" name="report_company" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="report_title">Job Title<span class="required">*</span></label>
+                        <input type="text" id="report_title" name="report_title" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" id="cancelDownload">Cancel</button>
+                        <button type="submit" class="btn-primary">Generate Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/calculator.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
