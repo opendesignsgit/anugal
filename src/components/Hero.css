@@ -1,0 +1,286 @@
+.hero-section {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Curved background */
+.curve-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  z-index: -1;
+}
+
+.curve-background::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 30%;
+  background: linear-gradient(180deg, transparent 0%, #f8f9fa 100%);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+}
+
+/* Logo */
+.logo {
+  position: absolute;
+  top: 50px;
+  font-size: 2rem;
+  font-weight: bold;
+  color: white;
+  z-index: 10;
+}
+
+.logo h2 {
+  margin: 0;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Menu */
+.menu {
+  position: absolute;
+  top: 60px;
+  display: flex;
+  gap: 2rem;
+  z-index: 10;
+}
+
+.menu a {
+  color: white;
+  text-decoration: none;
+  font-size: 1.1rem;
+  font-weight: 500;
+  transition: opacity 0.3s ease;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.menu a:hover {
+  opacity: 0.8;
+}
+
+/* Headline */
+.headline {
+  position: absolute;
+  top: 25%;
+  font-size: 4rem;
+  font-weight: 900;
+  color: white;
+  text-align: center;
+  max-width: 90%;
+  line-height: 1.2;
+  margin: 0;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+}
+
+/* Text content */
+.text-content {
+  position: absolute;
+  top: 45%;
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  max-width: 600px;
+  line-height: 1.6;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 5;
+}
+
+/* Dashboard image */
+.dashboard-image {
+  position: absolute;
+  top: 55%;
+  width: 700px;
+  max-width: 90%;
+  z-index: 5;
+}
+
+.mockup-dashboard {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 20px;
+  width: 100%;
+}
+
+.dashboard-header {
+  height: 40px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 20px;
+}
+
+.dashboard-content {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.dashboard-content .card {
+  height: 120px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Content section after hero */
+.content-section {
+  min-height: 100vh;
+  background: #f8f9fa;
+  padding: 80px 20px;
+}
+
+.content-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.content-container h2 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 20px;
+  margin-top: 60px;
+}
+
+.content-container h2:first-child {
+  margin-top: 0;
+}
+
+.content-container p {
+  font-size: 1.2rem;
+  color: #666;
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-bottom: 60px;
+}
+
+.feature-card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.feature-card h3 {
+  font-size: 1.8rem;
+  color: #667eea;
+  margin-bottom: 15px;
+}
+
+.feature-card p {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0;
+}
+
+/* Responsive design for mobile devices */
+@media (max-width: 768px) {
+  .logo {
+    top: 30px;
+    font-size: 1.5rem;
+  }
+
+  .menu {
+    top: 35px;
+    gap: 1rem;
+  }
+
+  .menu a {
+    font-size: 0.9rem;
+  }
+
+  .headline {
+    font-size: 2.5rem;
+    top: 20%;
+  }
+
+  .text-content {
+    font-size: 1rem;
+    top: 40%;
+    max-width: 85%;
+  }
+
+  .dashboard-image {
+    width: 90%;
+    top: 52%;
+  }
+
+  .mockup-dashboard {
+    padding: 15px;
+  }
+
+  .dashboard-content {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dashboard-content .card {
+    height: 80px;
+  }
+
+  .content-container h2 {
+    font-size: 2rem;
+  }
+
+  .content-container p {
+    font-size: 1rem;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-card {
+    padding: 30px;
+  }
+
+  .feature-card h3 {
+    font-size: 1.5rem;
+  }
+
+  .feature-card p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .headline {
+    font-size: 2rem;
+  }
+
+  .text-content {
+    font-size: 0.9rem;
+  }
+
+  .logo h2 {
+    font-size: 1.3rem;
+  }
+
+  .menu a {
+    font-size: 0.8rem;
+  }
+}
