@@ -24,9 +24,6 @@ if (!class_exists('ROI_Submission_CPT')) {
       add_action('admin_init', array($this, 'register_settings'));
       add_action('wp_ajax_roi_submit_calculation', array($this, 'handle_submission'));
       add_action('wp_ajax_nopriv_roi_submit_calculation', array($this, 'handle_submission'));
-      
-      // Add AJAX URL to the calculator
-      add_action('wp_enqueue_scripts', array($this, 'localize_script'));
     }
 
     /**
@@ -191,16 +188,6 @@ if (!class_exists('ROI_Submission_CPT')) {
         </form>
       </div>
       <?php
-    }
-
-    /**
-     * Localize script with AJAX URL
-     */
-    public function localize_script() {
-      wp_localize_script('roi-calculator-inline-script', 'roiCalculatorAjax', array(
-        'ajaxurl' => admin_url('admin-ajax.php'),
-        'nonce'   => wp_create_nonce(self::NONCE_ACTION),
-      ));
     }
 
     /**

@@ -28,9 +28,19 @@ if (!class_exists('ROI_Calculator_Module')) {
       wp_enqueue_style('roi-calculator-inline-style');
       wp_add_inline_style('roi-calculator-inline-style', $this->inline_css());
 
-      // Scripts
+      // Scripts - add AJAX config before main script
       wp_register_script('roi-calculator-inline-script', false, array(), '1.0.2', true);
       wp_enqueue_script('roi-calculator-inline-script');
+      
+      // Inject AJAX configuration before the main script
+      $ajax_config = sprintf(
+        'var roiCalculatorAjax = %s;',
+        wp_json_encode(array(
+          'ajaxurl' => admin_url('admin-ajax.php'),
+          'nonce'   => wp_create_nonce('roi_submission_nonce'),
+        ))
+      );
+      wp_add_inline_script('roi-calculator-inline-script', $ajax_config, 'before');
       wp_add_inline_script('roi-calculator-inline-script', $this->inline_js(), 'after');
 
       // Markup
