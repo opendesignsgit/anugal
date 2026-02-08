@@ -69,15 +69,7 @@ if (!class_exists('ROI_Calculator_Module')) {
               <div class="roi-row">
                 <div class="roi-field">
                   <label class="roi-label" for="roi-region">Region<span class="roi-required">*</span></label>
-                  <select id="roi-region" class="roi-input roi-select" required>
-                    <option value="">Select Region</option>
-                    <option value="US">United States</option>
-                    <option value="EU">Europe</option>
-                    <option value="UK">United Kingdom</option>
-                    <option value="APAC">Asia Pacific</option>
-                    <option value="MEA">Middle East & Africa</option>
-                    <option value="LATAM">Latin America</option>
-                  </select>
+                  <input id="roi-region" type="text" class="roi-input" placeholder="e.g., United States, Europe, Asia Pacific" required>
                 </div>
                 <div class="roi-field">
                   <label class="roi-label" for="roi-employees">Total Number of Employees<span class="roi-required">*</span></label>
@@ -91,15 +83,15 @@ if (!class_exists('ROI_Calculator_Module')) {
                   <input id="roi-apps" type="number" min="1" max="200" step="1" class="roi-input" required>
                 </div>
                 <div class="roi-field">
-                  <label class="roi-label" for="roi-am-percent">% of People Who Operate or Approve Access</label>
-                  <input id="roi-am-percent" type="number" min="0" max="100" step="1" class="roi-input" placeholder="Default: 10%">
+                  <label class="roi-label" for="roi-am-percent">% of People Who Operate or Approve Access<span class="roi-required">*</span></label>
+                  <input id="roi-am-percent" type="number" min="0" max="100" step="1" class="roi-input" placeholder="e.g., 10" required>
                 </div>
               </div>
 
               <div class="roi-row">
                 <div class="roi-field">
-                  <label class="roi-label" for="roi-cli-percent">% of Identities Tracked for Audit only</label>
-                  <input id="roi-cli-percent" type="number" min="0" max="100" step="1" class="roi-input" placeholder="Default: 0%">
+                  <label class="roi-label" for="roi-cli-percent">% of Identities Tracked for Audit only<span class="roi-required">*</span></label>
+                  <input id="roi-cli-percent" type="number" min="0" max="100" step="1" class="roi-input" placeholder="e.g., 0" required>
                 </div>
                 <div class="roi-field">
                   <label class="roi-label" for="roi-review-cycles">How often do you Run Access Reviews?<span class="roi-required">*</span></label>
@@ -115,12 +107,12 @@ if (!class_exists('ROI_Calculator_Module')) {
 
               <div class="roi-row">
                 <div class="roi-field">
-                  <label class="roi-label" for="roi-days-per-review">Approximate Days Spent Per Access Review Cycle</label>
-                  <input id="roi-days-per-review" type="number" min="1" max="30" step="1" class="roi-input" placeholder="Default: 7 days">
+                  <label class="roi-label" for="roi-days-per-review">Approximate Days Spent Per Access Review Cycle<span class="roi-required">*</span></label>
+                  <input id="roi-days-per-review" type="number" min="1" max="30" step="1" class="roi-input" placeholder="e.g., 7" required>
                 </div>
                 <div class="roi-field">
-                  <label class="roi-label" for="roi-daily-tickets">Approximate No. of Access related Tickets Per Day</label>
-                  <input id="roi-daily-tickets" type="number" min="0" max="500" step="1" class="roi-input" placeholder="Auto-derived if empty">
+                  <label class="roi-label" for="roi-daily-tickets">Approximate No. of Access related Tickets Per Day<span class="roi-required">*</span></label>
+                  <input id="roi-daily-tickets" type="number" min="0" max="500" step="1" class="roi-input" placeholder="e.g., 10" required>
                 </div>
               </div>
 
@@ -246,6 +238,8 @@ if (!class_exists('ROI_Calculator_Module')) {
 .roi-card__status--moderate{background:rgba(251,191,36,0.25);color:#FCD34D}
 .roi-card__status--strong{background:rgba(34,197,94,0.25);color:#86EFAC}
 .roi-card__status--excellent{background:rgba(16,185,129,0.3);color:#6EE7B7}
+.roi-field-error{color:#E53935;font-size:11px;margin-top:4px;display:none}
+.roi-field{position:relative}
 CSS;
     }
 
@@ -390,67 +384,157 @@ CSS;
   function applyDefaults(inputs) {
     var result = Object.assign({}, inputs);
     
+    // No defaults - all fields are required now
     if (result.am_percent === null) {
-      result.am_percent = CONSTANTS.DEFAULT_AM_PERCENT;
+      result.am_percent = 0;
     }
     if (result.cli_percent === null) {
-      result.cli_percent = CONSTANTS.DEFAULT_CLI_PERCENT;
+      result.cli_percent = 0;
     }
     if (!result.review_cycles_per_year) {
-      result.review_cycles_per_year = CONSTANTS.DEFAULT_REVIEW_CYCLES;
+      result.review_cycles_per_year = 0;
     }
     if (result.days_per_review === null) {
-      result.days_per_review = CONSTANTS.DEFAULT_DAYS_PER_REVIEW;
+      result.days_per_review = 0;
+    }
+    if (result.daily_access_tickets === null) {
+      result.daily_access_tickets = 0;
     }
     
     return result;
   }
 
+  // Validate a single field and return error if any
+  function validateField(fieldId) {
+    var field = el(fieldId);
+    if (!field) return null;
+    
+    var value = field.value;
+    var trimmedValue = (typeof value === 'string') ? value.trim() : value;
+    
+    switch(fieldId) {
+      case 'roi-name':
+        if (!trimmedValue) return {field: fieldId, message: 'Name is required'};
+        break;
+      case 'roi-phone':
+        if (!trimmedValue) return {field: fieldId, message: 'Phone Number is required'};
+        break;
+      case 'roi-email':
+        if (!trimmedValue) return {field: fieldId, message: 'Work Email is required'};
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedValue)) return {field: fieldId, message: 'Please enter a valid email address'};
+        break;
+      case 'roi-company':
+        if (!trimmedValue) return {field: fieldId, message: 'Company Name is required'};
+        break;
+      case 'roi-region':
+        if (!trimmedValue) return {field: fieldId, message: 'Region is required'};
+        break;
+      case 'roi-employees':
+        var emp = parseInt(value, 10);
+        if (!value || isNaN(emp) || emp < 1) return {field: fieldId, message: 'Total Number of Employees must be at least 1'};
+        if (emp > 100000) return {field: fieldId, message: 'Maximum 100,000 employees'};
+        break;
+      case 'roi-apps':
+        var apps = parseInt(value, 10);
+        if (!value || isNaN(apps) || apps < 1) return {field: fieldId, message: 'Number of Applications must be at least 1'};
+        if (apps > 200) return {field: fieldId, message: 'Maximum 200 applications'};
+        break;
+      case 'roi-am-percent':
+        var amPct = parseFloat(value);
+        if (value === '' || isNaN(amPct)) return {field: fieldId, message: 'AM% is required'};
+        if (amPct < 0 || amPct > 100) return {field: fieldId, message: 'AM% must be between 0 and 100'};
+        break;
+      case 'roi-cli-percent':
+        var cliPct = parseFloat(value);
+        if (value === '' || isNaN(cliPct)) return {field: fieldId, message: 'CLI% is required'};
+        if (cliPct < 0 || cliPct > 100) return {field: fieldId, message: 'CLI% must be between 0 and 100'};
+        break;
+      case 'roi-review-cycles':
+        var cycles = parseInt(value, 10);
+        if (!value || [1, 2, 4, 12].indexOf(cycles) === -1) return {field: fieldId, message: 'Access Review frequency is required'};
+        break;
+      case 'roi-days-per-review':
+        var days = parseInt(value, 10);
+        if (value === '' || isNaN(days)) return {field: fieldId, message: 'Days per Access Review is required'};
+        if (days < 1 || days > 30) return {field: fieldId, message: 'Days must be between 1 and 30'};
+        break;
+      case 'roi-daily-tickets':
+        var tickets = parseInt(value, 10);
+        if (value === '' || isNaN(tickets)) return {field: fieldId, message: 'Daily Access Tickets is required'};
+        if (tickets < 0) return {field: fieldId, message: 'Daily Access Tickets cannot be negative'};
+        if (tickets > 500) return {field: fieldId, message: 'Maximum 500 tickets per day'};
+        break;
+    }
+    return null;
+  }
+
+  // Show error for a specific field
+  function showFieldError(fieldId, message) {
+    var field = el(fieldId);
+    if (!field) return;
+    
+    field.classList.add('roi-input--error');
+    
+    // Create or update inline error message
+    var errorEl = document.getElementById(fieldId + '-error');
+    if (!errorEl) {
+      errorEl = document.createElement('div');
+      errorEl.id = fieldId + '-error';
+      errorEl.className = 'roi-field-error';
+      field.parentNode.appendChild(errorEl);
+    }
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+  }
+
+  // Clear error for a specific field
+  function clearFieldError(fieldId) {
+    var field = el(fieldId);
+    if (!field) return;
+    
+    field.classList.remove('roi-input--error');
+    
+    var errorEl = document.getElementById(fieldId + '-error');
+    if (errorEl) {
+      errorEl.style.display = 'none';
+    }
+  }
+
+  // Live validation handler for single field
+  function handleFieldValidation(fieldId) {
+    var error = validateField(fieldId);
+    if (error) {
+      showFieldError(error.field, error.message);
+      return false;
+    } else {
+      clearFieldError(fieldId);
+      return true;
+    }
+  }
+
   function validateInputs(rawInputs) {
     var errors = [];
-    var inputs = applyDefaults(rawInputs);
 
-    if (!el('roi-name').value.trim()) {
-      errors.push({field: 'roi-name', message: 'Name is required'});
+    // Validate all required fields
+    var fieldIds = [
+      'roi-name', 'roi-phone', 'roi-email', 'roi-company', 'roi-region',
+      'roi-employees', 'roi-apps', 'roi-am-percent', 'roi-cli-percent',
+      'roi-review-cycles', 'roi-days-per-review', 'roi-daily-tickets'
+    ];
+    
+    for (var i = 0; i < fieldIds.length; i++) {
+      var error = validateField(fieldIds[i]);
+      if (error) {
+        errors.push(error);
+      }
     }
-    if (!el('roi-phone').value.trim()) {
-      errors.push({field: 'roi-phone', message: 'Phone Number is required'});
-    }
-    if (!el('roi-email').value.trim()) {
-      errors.push({field: 'roi-email', message: 'Work Email is required'});
-    }
-    if (!el('roi-company').value.trim()) {
-      errors.push({field: 'roi-company', message: 'Company Name is required'});
-    }
-    if (!rawInputs.region) {
-      errors.push({field: 'roi-region', message: 'Region is required'});
-    }
-    if (rawInputs.employee_count < 1) {
-      errors.push({field: 'roi-employees', message: 'Total Number of Employees must be at least 1'});
-    }
-    if (rawInputs.connected_apps < 1) {
-      errors.push({field: 'roi-apps', message: 'Number of Applications to Govern must be at least 1'});
-    }
-    if (rawInputs.am_percent !== null && (rawInputs.am_percent < 0 || rawInputs.am_percent > 1)) {
-      errors.push({field: 'roi-am-percent', message: 'AM% must be between 0 and 100'});
-    }
-    if (rawInputs.cli_percent !== null && (rawInputs.cli_percent < 0 || rawInputs.cli_percent > 1)) {
-      errors.push({field: 'roi-cli-percent', message: 'CLI% must be between 0 and 100'});
-    }
-    // Check AM + CLI after defaults are applied
-    if ((inputs.am_percent + inputs.cli_percent) > 1) {
+
+    // Cross-field validation: Check AM + CLI doesn't exceed 100%
+    var amVal = parseFloat(el('roi-am-percent').value) || 0;
+    var cliVal = parseFloat(el('roi-cli-percent').value) || 0;
+    if ((amVal + cliVal) > 100) {
       errors.push({field: 'roi-am-percent', message: 'AM% + CLI% cannot exceed 100%'});
       errors.push({field: 'roi-cli-percent', message: ''});
-    }
-    var validCycles = [1, 2, 4, 12];
-    if (validCycles.indexOf(rawInputs.review_cycles_per_year) === -1) {
-      errors.push({field: 'roi-review-cycles', message: 'Access Review frequency must be selected'});
-    }
-    if (rawInputs.days_per_review !== null && (rawInputs.days_per_review < 1 || rawInputs.days_per_review > 30)) {
-      errors.push({field: 'roi-days-per-review', message: 'Days per Access Review must be between 1 and 30'});
-    }
-    if (rawInputs.daily_access_tickets !== null && rawInputs.daily_access_tickets < 0) {
-      errors.push({field: 'roi-daily-tickets', message: 'Daily Access Tickets cannot be negative'});
     }
 
     return errors;
@@ -752,6 +836,68 @@ CSS;
     return safe;
   }
 
+  // Submit calculation to server via AJAX
+  function submitCalculation(inputs, result) {
+    if (typeof roiCalculatorAjax === 'undefined') {
+      console.log('AJAX not available');
+      return;
+    }
+    
+    var paybackValue = el('roi-payback-value');
+    var paybackText = paybackValue ? paybackValue.innerText : 'N/A';
+    
+    var formData = new FormData();
+    formData.append('action', 'roi_submit_calculation');
+    formData.append('nonce', roiCalculatorAjax.nonce);
+    
+    // Form inputs
+    formData.append('name', el('roi-name').value);
+    formData.append('phone', el('roi-phone').value);
+    formData.append('email', el('roi-email').value);
+    formData.append('company', el('roi-company').value);
+    formData.append('region', inputs.region);
+    formData.append('employees', inputs.employee_count);
+    formData.append('apps', inputs.connected_apps);
+    formData.append('am_percent', (inputs.am_percent || 0) * 100);
+    formData.append('cli_percent', (inputs.cli_percent || 0) * 100);
+    formData.append('review_cycles', inputs.review_cycles_per_year);
+    formData.append('days_per_review', inputs.days_per_review || 0);
+    formData.append('daily_tickets', inputs.daily_access_tickets || 0);
+    
+    // Calculation results
+    formData.append('hours_saved', result.hours_saved_annual);
+    formData.append('annual_savings_eur', result.annual_savings_eur);
+    formData.append('subscription_eur', result.annual_subscription_eur);
+    formData.append('implementation_eur', result.implementation_cost_eur);
+    formData.append('roi_year1', result.roi_year1);
+    formData.append('roi_3year', result.roi_3y);
+    formData.append('payback', paybackText);
+    
+    fetch(roiCalculatorAjax.ajaxurl, {
+      method: 'POST',
+      body: formData
+    })
+    .then(function(response) {
+      return response.json();
+    })
+    .then(function(data) {
+      if (data.success) {
+        // Show success message
+        showSuccessMessage('Your ROI calculation has been saved. A copy has been sent to your email.');
+      }
+    })
+    .catch(function(error) {
+      console.error('Submission error:', error);
+    });
+  }
+
+  function showSuccessMessage(message) {
+    var warningsEl = el('roi-warnings');
+    if (warningsEl) {
+      warningsEl.innerHTML = '<span style="color:#059669">✓ ' + message + '</span>';
+    }
+  }
+
   function handleCalculate() {
     var inputs = getInputs();
     var errors = validateInputs(inputs);
@@ -774,6 +920,9 @@ CSS;
     showWarnings(warnings);
     
     renderResults(safeResult);
+    
+    // Submit to server for storage and email
+    submitCalculation(inputs, safeResult);
   }
 
   // Check if minimum required inputs are present for calculation
@@ -839,9 +988,17 @@ CSS;
     // Also trigger on select change
     container.addEventListener('change', function(e) {
       if (e.target && e.target.classList.contains('roi-select')) {
+        handleFieldValidation(e.target.id);
         debouncedLiveCalculate();
       }
     });
+    
+    // Live validation on blur
+    container.addEventListener('blur', function(e) {
+      if (e.target && e.target.classList.contains('roi-input')) {
+        handleFieldValidation(e.target.id);
+      }
+    }, true); // Use capture phase for blur
   }
 })();
 JS;
