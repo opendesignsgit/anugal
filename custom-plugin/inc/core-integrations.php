@@ -257,7 +257,7 @@ if (!class_exists('Core_Integrations_Module')) {
 .ci-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
 @media (max-width:1024px){.ci-grid{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:640px){.ci-grid{grid-template-columns:1fr}}
-.ci-card{background:#fff;border-radius:16px;border:1px solid #EEE;box-shadow:0 4px 12px rgba(0,0,0,.04);overflow:hidden;padding:28px;transition:all .3s ease;cursor:pointer}
+.ci-card{display:block;text-decoration:none;background:#fff;border-radius:16px;border:1px solid #EEE;box-shadow:0 4px 12px rgba(0,0,0,.04);overflow:hidden;padding:28px;transition:all .3s ease;cursor:pointer}
 .ci-card:hover{background:linear-gradient(135deg,#1e3a8a 0%,#3b5998 50%,#667eea 100%);box-shadow:0 8px 24px rgba(0,0,0,.12);transform:translateY(-2px)}
 .ci-card:hover .ci-card__title{color:#fff}
 .ci-card:hover .ci-card__title::after{background:rgba(255,255,255,.3)}
@@ -430,11 +430,11 @@ CSS;
 
     function renderCard(post){
         var iconHtml = post.icon ? '<img src="'+escHtml(post.icon)+'" alt="">' : '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3E54E8" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
-        return '<article class="ci-card" onclick="window.location.href=\''+escHtml(post.link)+'\'">' +
+        return '<a href="'+escHtml(post.link)+'" class="ci-card">' +
             '<div class="ci-card__icon">'+iconHtml+'</div>' +
             '<h3 class="ci-card__title">'+escHtml(post.title)+'</h3>' +
             '<p class="ci-card__desc">'+escHtml(post.excerpt)+'</p>' +
-        '</article>';
+        '</a>';
     }
 
     function escHtml(str){
