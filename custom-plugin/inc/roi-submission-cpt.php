@@ -16,6 +16,17 @@ if (!class_exists('ROI_Submission_CPT')) {
     const POST_TYPE = 'roi_submission';
     const OPTION_ADMIN_EMAIL = 'roi_calculator_admin_email';
     const NONCE_ACTION = 'roi_submission_nonce';
+    
+    // SMTP Configuration Options
+    const OPTION_SMTP_ENABLED = 'roi_smtp_enabled';
+    const OPTION_SMTP_HOST = 'roi_smtp_host';
+    const OPTION_SMTP_PORT = 'roi_smtp_port';
+    const OPTION_SMTP_ENCRYPTION = 'roi_smtp_encryption';
+    const OPTION_SMTP_AUTH = 'roi_smtp_auth';
+    const OPTION_SMTP_USERNAME = 'roi_smtp_username';
+    const OPTION_SMTP_PASSWORD = 'roi_smtp_password';
+    const OPTION_SMTP_FROM_EMAIL = 'roi_smtp_from_email';
+    const OPTION_SMTP_FROM_NAME = 'roi_smtp_from_name';
 
     public function __construct() {
       add_action('init', array($this, 'register_post_type'));
@@ -24,6 +35,9 @@ if (!class_exists('ROI_Submission_CPT')) {
       add_action('admin_init', array($this, 'register_settings'));
       add_action('wp_ajax_roi_submit_calculation', array($this, 'handle_submission'));
       add_action('wp_ajax_nopriv_roi_submit_calculation', array($this, 'handle_submission'));
+      
+      // Configure PHPMailer to use SMTP if enabled
+      add_action('phpmailer_init', array($this, 'configure_smtp'));
     }
 
     /**
@@ -154,10 +168,56 @@ if (!class_exists('ROI_Submission_CPT')) {
      * Register settings
      */
     public function register_settings() {
+      // Admin email setting
       register_setting('roi_calculator_settings', self::OPTION_ADMIN_EMAIL, array(
         'type' => 'string',
         'sanitize_callback' => 'sanitize_email',
         'default' => get_option('admin_email'),
+      ));
+      
+      // SMTP settings
+      register_setting('roi_calculator_settings', self::OPTION_SMTP_ENABLED, array(
+        'type' => 'boolean',
+        'default' => false,
+      ));
+      register_setting('roi_calculator_settings', self::OPTION_SMTP_HOST, array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_text_field',
+        'default' => '',
+      ));
+      register_setting('roi_calculator_settings', self::OPTION_SMTP_PORT, array(
+        'type' => 'integer',
+        'sanitize_callback' => 'absint',
+        'default' => 587,
+      ));
+      register_setting('roi_calculator_settings', self::OPTION_SMTP_ENCRYPTION, array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_text_field',
+        'default' => 'tls',
+      ));
+      register_setting('roi_calculator_settings', self::OPTION_SMTP_AUTH, array(
+        'type' => 'boolean',
+        'default' => true,
+      ));
+      register_setting('roi_calculator_settings', self::OPTION_SMTP_USERNAME, array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_text_field',
+        'default' => '',
+      ));
+      register_setting('roi_calculator_settings', self::OPTION_SMTP_PASSWORD, array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_text_field',
+        'default' => '',
+      ));
+      register_setting('roi_calculator_settings', self::OPTION_SMTP_FROM_EMAIL, array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_email',
+        'default' => '',
+      ));
+      register_setting('roi_calculator_settings', self::OPTION_SMTP_FROM_NAME, array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_text_field',
+        'default' => 'Anugal',
       ));
     }
 
@@ -168,26 +228,165 @@ if (!class_exists('ROI_Submission_CPT')) {
       if (!current_user_can('manage_options')) {
         return;
       }
+      
+      $smtp_enabled = get_option(self::OPTION_SMTP_ENABLED, false);
+      $smtp_host = get_option(self::OPTION_SMTP_HOST, '');
+      $smtp_port = get_option(self::OPTION_SMTP_PORT, 587);
+      $smtp_encryption = get_option(self::OPTION_SMTP_ENCRYPTION, 'tls');
+      $smtp_auth = get_option(self::OPTION_SMTP_AUTH, true);
+      $smtp_username = get_option(self::OPTION_SMTP_USERNAME, '');
+      $smtp_password = get_option(self::OPTION_SMTP_PASSWORD, '');
+      $smtp_from_email = get_option(self::OPTION_SMTP_FROM_EMAIL, '');
+      $smtp_from_name = get_option(self::OPTION_SMTP_FROM_NAME, 'Anugal');
       ?>
       <div class="wrap">
         <h1>ROI Calculator Settings</h1>
         <form method="post" action="options.php">
           <?php settings_fields('roi_calculator_settings'); ?>
+          
+          <h2>Notification Settings</h2>
           <table class="form-table">
             <tr>
-              <th scope="row"><label for="<?php echo self::OPTION_ADMIN_EMAIL; ?>">Admin Notification Email</label></th>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL); ?>">Admin Notification Email</label></th>
               <td>
-                <input type="email" id="<?php echo self::OPTION_ADMIN_EMAIL; ?>" name="<?php echo self::OPTION_ADMIN_EMAIL; ?>" 
+                <input type="email" id="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL); ?>" name="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL); ?>" 
                        value="<?php echo esc_attr(get_option(self::OPTION_ADMIN_EMAIL, get_option('admin_email'))); ?>" 
                        class="regular-text">
                 <p class="description">Email address to receive ROI calculation submissions. Defaults to the WordPress admin email.</p>
               </td>
             </tr>
           </table>
+          
+          <h2>SMTP Configuration</h2>
+          <p class="description">Configure SMTP settings to send emails via an external mail server instead of PHP's mail() function.</p>
+          
+          <table class="form-table">
+            <tr>
+              <th scope="row">Enable SMTP</th>
+              <td>
+                <label>
+                  <input type="checkbox" name="<?php echo esc_attr(self::OPTION_SMTP_ENABLED); ?>" value="1" <?php checked($smtp_enabled, true); ?>>
+                  Use SMTP to send emails
+                </label>
+                <p class="description">Enable this to send emails via SMTP server instead of PHP mail().</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_SMTP_HOST); ?>">SMTP Host</label></th>
+              <td>
+                <input type="text" id="<?php echo esc_attr(self::OPTION_SMTP_HOST); ?>" name="<?php echo esc_attr(self::OPTION_SMTP_HOST); ?>" 
+                       value="<?php echo esc_attr($smtp_host); ?>" class="regular-text" placeholder="smtp.example.com">
+                <p class="description">SMTP server hostname (e.g., smtp.gmail.com, smtp.office365.com)</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_SMTP_PORT); ?>">SMTP Port</label></th>
+              <td>
+                <input type="number" id="<?php echo esc_attr(self::OPTION_SMTP_PORT); ?>" name="<?php echo esc_attr(self::OPTION_SMTP_PORT); ?>" 
+                       value="<?php echo esc_attr($smtp_port); ?>" class="small-text" min="1" max="65535">
+                <p class="description">Common ports: 587 (TLS), 465 (SSL), 25 (unsecured)</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_SMTP_ENCRYPTION); ?>">Encryption</label></th>
+              <td>
+                <select id="<?php echo esc_attr(self::OPTION_SMTP_ENCRYPTION); ?>" name="<?php echo esc_attr(self::OPTION_SMTP_ENCRYPTION); ?>">
+                  <option value="tls" <?php selected($smtp_encryption, 'tls'); ?>>TLS</option>
+                  <option value="ssl" <?php selected($smtp_encryption, 'ssl'); ?>>SSL</option>
+                  <option value="" <?php selected($smtp_encryption, ''); ?>>None</option>
+                </select>
+                <p class="description">TLS is recommended for port 587, SSL for port 465</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Authentication</th>
+              <td>
+                <label>
+                  <input type="checkbox" name="<?php echo esc_attr(self::OPTION_SMTP_AUTH); ?>" value="1" <?php checked($smtp_auth, true); ?>>
+                  Require authentication
+                </label>
+                <p class="description">Most SMTP servers require authentication.</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_SMTP_USERNAME); ?>">SMTP Username</label></th>
+              <td>
+                <input type="text" id="<?php echo esc_attr(self::OPTION_SMTP_USERNAME); ?>" name="<?php echo esc_attr(self::OPTION_SMTP_USERNAME); ?>" 
+                       value="<?php echo esc_attr($smtp_username); ?>" class="regular-text" autocomplete="off">
+                <p class="description">Usually your email address</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_SMTP_PASSWORD); ?>">SMTP Password</label></th>
+              <td>
+                <input type="password" id="<?php echo esc_attr(self::OPTION_SMTP_PASSWORD); ?>" name="<?php echo esc_attr(self::OPTION_SMTP_PASSWORD); ?>" 
+                       value="<?php echo esc_attr($smtp_password); ?>" class="regular-text" autocomplete="new-password">
+                <p class="description">For Gmail, use an App Password. <strong>Note:</strong> Password is stored in the database.</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_SMTP_FROM_EMAIL); ?>">From Email</label></th>
+              <td>
+                <input type="email" id="<?php echo esc_attr(self::OPTION_SMTP_FROM_EMAIL); ?>" name="<?php echo esc_attr(self::OPTION_SMTP_FROM_EMAIL); ?>" 
+                       value="<?php echo esc_attr($smtp_from_email); ?>" class="regular-text" placeholder="noreply@example.com">
+                <p class="description">Email address shown as the sender. Leave empty to use WordPress admin email.</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_SMTP_FROM_NAME); ?>">From Name</label></th>
+              <td>
+                <input type="text" id="<?php echo esc_attr(self::OPTION_SMTP_FROM_NAME); ?>" name="<?php echo esc_attr(self::OPTION_SMTP_FROM_NAME); ?>" 
+                       value="<?php echo esc_attr($smtp_from_name); ?>" class="regular-text" placeholder="Anugal">
+                <p class="description">Name shown as the sender</p>
+              </td>
+            </tr>
+          </table>
+          
           <?php submit_button(); ?>
         </form>
       </div>
       <?php
+    }
+
+    /**
+     * Configure PHPMailer to use SMTP
+     */
+    public function configure_smtp($phpmailer) {
+      $smtp_enabled = get_option(self::OPTION_SMTP_ENABLED, false);
+      
+      if (!$smtp_enabled) {
+        return;
+      }
+      
+      $smtp_host = get_option(self::OPTION_SMTP_HOST, '');
+      if (empty($smtp_host)) {
+        return;
+      }
+      
+      // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+      $phpmailer->isSMTP();
+      $phpmailer->Host = $smtp_host;
+      $phpmailer->Port = get_option(self::OPTION_SMTP_PORT, 587);
+      
+      $encryption = get_option(self::OPTION_SMTP_ENCRYPTION, 'tls');
+      if (!empty($encryption)) {
+        $phpmailer->SMTPSecure = $encryption;
+      }
+      
+      $smtp_auth = get_option(self::OPTION_SMTP_AUTH, true);
+      $phpmailer->SMTPAuth = (bool) $smtp_auth;
+      
+      if ($smtp_auth) {
+        $phpmailer->Username = get_option(self::OPTION_SMTP_USERNAME, '');
+        $phpmailer->Password = get_option(self::OPTION_SMTP_PASSWORD, '');
+      }
+      
+      $from_email = get_option(self::OPTION_SMTP_FROM_EMAIL, '');
+      $from_name = get_option(self::OPTION_SMTP_FROM_NAME, 'Anugal');
+      
+      if (!empty($from_email)) {
+        $phpmailer->setFrom($from_email, $from_name);
+      }
     }
 
     /**
