@@ -196,265 +196,181 @@ if (!class_exists('Recent_Blogs_Module')) {
 CSS;
         }
 
- private function inline_js() {
-  return <<<'JS'
+        private function inline_js() {
+            return <<<'JS'
 (function(){
-  var cfg = window.RoiCalcConfig || {};
-  var derive = cfg.derive || {};
-  var eff = cfg.efficiency || {};
-  var base = cfg.baselines || {};
-  var hourlyDefault = cfg.hourlyCostDefault || 75;
+    var cfg = window.RecentBlogsData || {};
+    var container = null, page = 1, totalPages = 1, loading = false, initialized = false;
+    var currentSearch = '', currentOrderby = 'date', currentOrder = 'desc';
 
-  var container = null, initialized = false;
+    function el(id){ return document.getElementById(id); }
+    function qs(sel, ctx){ return (ctx||document).querySelector(sel); }
+    function qsa(sel, ctx){ return (ctx||document).querySelectorAll(sel); }
 
-  function el(id){ return document.getElementById(id); }
-
-  function tryInit(){
-    container = document.getElementById('roi-calculator');
-    if (!container || initialized) return;
-    container.setAttribute('data-roi-init', '1');
-    bindDelegated();
-    autoDeriveAll();
-    calculateAndRender();
-    initialized = true;
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tryInit);
-  } else {
-    tryInit();
-  }
-
-  function autoDeriveAll(){
-    var E = parseInt((el('roi-employees').value || '0'), 10);
-    if (!E || E < 1) E = 1;
-
-    var dBase = parseFloat(derive.daysPerAccessReview_base || 5);
-    var dPer = parseFloat(derive.daysPerAccessReview_perEmp || 0.5);
-    var daysReview = Math.max(1, Math.round(dBase + dPer * E));
-    el('roi-days-per-review').value = daysReview;
-
-    var br = Math.max(0, Math.round((derive.birthrightApps_perEmp || 2) * E));
-    el('roi-birthright-apps').value = br;
-
-    var onb = Math.max(0, Math.round((derive.onboards_perEmp || 0.5) * E));
-    el('roi-onboards').value = onb;
-
-    var offb = Math.max(0, Math.round((derive.offboards_perEmp || 0.2) * E));
-    el('roi-offboards').value = offb;
-
-    var tix = Math.max(0, Math.round((derive.tickets_perEmp || 0.6) * E));
-    el('roi-tickets').value = tix;
-
-    if (!el('roi-hourly-cost').value) el('roi-hourly-cost').value = hourlyDefault;
-  }
-
-  function calculate(){
-    var E = parseInt((el('roi-employees').value || '0'), 10);
-    var cycles = parseInt((el('roi-review-cycles').value || '0'), 10);
-    var daysReview = parseFloat(el('roi-days-per-review').value || '0');
-    var birthrightPerMonth = parseInt((el('roi-birthright-apps').value || '0'), 10);
-    var onboardsPerMonth = parseInt((el('roi-onboards').value || '0'), 10);
-    var offboardsPerMonth = parseInt((el('roi-offboards').value || '0'), 10);
-    var ticketsPerDay = parseInt((el('roi-tickets').value || '0'), 10);
-    var minutesPerTicket = parseFloat(el('roi-minutes-per-ticket').value || '0');
-    var hourlyCost = parseFloat(el('roi-hourly-cost').value || hourlyDefault);
-
-    var effReview = eff.review || 0.50;
-    var effBR = eff.birthright || 0.35;
-    var effOnb = eff.onboarding || 0.40;
-    var effOffb = eff.offboarding || 0.50;
-    var effTix = eff.tickets || 0.40;
-
-    var brMin = base.birthright_minutes || 15;
-    var onbMin = base.onboarding_minutes || 60;
-    var offbMin = base.offboarding_minutes || 40;
-
-    var reviewHoursSavedAnnual = (daysReview * 8 * cycles) * effReview;
-    var brHoursSavedAnnual = ((birthrightPerMonth * 12) * brMin * effBR) / 60;
-    var onbHoursSavedAnnual = ((onboardsPerMonth * 12) * onbMin * effOnb) / 60;
-    var offbHoursSavedAnnual = ((offboardsPerMonth * 12) * offbMin * effOffb) / 60;
-    var workDaysYear = 264;
-    var tixHoursSavedAnnual = ((ticketsPerDay * workDaysYear) * minutesPerTicket * effTix) / 60;
-
-    var totalHoursAnnual = reviewHoursSavedAnnual + brHoursSavedAnnual + onbHoursSavedAnnual + offbHoursSavedAnnual + tixHoursSavedAnnual;
-    var totalHoursMonthly = totalHoursAnnual / 12;
-
-    var costAnnual = totalHoursAnnual * hourlyCost;
-    var costMonthly = costAnnual / 12;
-
-    return {
-      hoursAnnual: totalHoursAnnual,
-      hoursMonthly: totalHoursMonthly,
-      costAnnual: costAnnual,
-      costMonthly: costMonthly,
-      inputs: {
-        employees: E, cycles: cycles, daysReview: daysReview, birthrightPerMonth: birthrightPerMonth,
-        onboardsPerMonth: onboardsPerMonth, offboardsPerMonth: offboardsPerMonth, ticketsPerDay: ticketsPerDay,
-        minutesPerTicket: minutesPerTicket, hourlyCost: hourlyCost
-      }
-    };
-  }
-
-  function fmtMoney(n){
-    try { return Math.round(n).toLocaleString('en-US'); }
-    catch(e){ var x = Math.round(n)+''; return x.replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
-  }
-  function fmtHours(n){ return Math.round(n); }
-
-  function calculateAndRender(){
-    var r = calculate();
-    el('roi-time-annual').innerText = fmtHours(r.hoursAnnual);
-    el('roi-time-monthly').innerText = fmtHours(r.hoursMonthly);
-    el('roi-cost-annual').innerText = fmtMoney(r.costAnnual);
-    el('roi-cost-monthly').innerText = fmtMoney(r.costMonthly);
-    return r;
-  }
-
-  function openModal(){ var m = el('roi-modal'); if (m){ m.setAttribute('aria-hidden', 'false'); } }
-  function closeModal(){ var m = el('roi-modal'); if (m){ m.setAttribute('aria-hidden', 'true'); } }
-
-  function downloadReport(data){
-    function loadJsPDF(cb){
-      if (window.jspdf || window.jsPDF) return cb();
-      var s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-      s.onload = function(){ cb(); };
-      s.onerror = function(){ cb(new Error('cdn_failed')); };
-      document.head.appendChild(s);
+    function tryInit(){
+        container = document.getElementById('recent-blogs-module');
+        if (!container || initialized) return;
+        if (container.getAttribute('data-rb-init') === '1') return;
+        container.setAttribute('data-rb-init', '1');
+        bindEvents();
+        fetchPosts(1, true);
+        initialized = true;
     }
 
-    loadJsPDF(function(err){
-      if (!err && (window.jspdf || window.jsPDF)) {
-        try {
-          var jsPdf = window.jspdf || window.jsPDF;
-          var doc = new jsPdf.jsPDF({ unit: 'pt', format: 'a4' });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tryInit);
+    } else {
+        tryInit();
+    }
 
-          var y = 40, lh = 20;
-          doc.setFont('helvetica','bold'); doc.setFontSize(16);
-          doc.text('ROI Report', 40, y); y += lh;
-          doc.setFont('helvetica','normal'); doc.setFontSize(12);
-          doc.text('Name: ' + (data.user.name||''), 40, y); y += lh;
-          doc.text('Email: ' + (data.user.email||''), 40, y); y += lh;
-          doc.text('Company: ' + (data.user.company||''), 40, y); y += lh;
-          if (data.user.role) { doc.text('Job Title: ' + data.user.role, 40, y); y += lh; }
-          y += 8;
-
-          doc.setFont('helvetica','bold'); doc.text('Inputs', 40, y); y += lh;
-          doc.setFont('helvetica','normal');
-          var inp = data.inputs;
-          var lines = [
-            'Employees: ' + inp.employees,
-            'Review cycles/year: ' + inp.cycles,
-            'Days per review: ' + inp.daysReview,
-            'Birthright apps/month: ' + inp.birthrightPerMonth,
-            'Onboardings/month: ' + inp.onboardsPerMonth,
-            'Offboardings/month: ' + inp.offboardsPerMonth,
-            'Access tickets/day: ' + inp.ticketsPerDay,
-            'Minutes per ticket: ' + inp.minutesPerTicket,
-            'Avg hourly cost ($): ' + inp.hourlyCost
-          ];
-          for (var i=0;i<lines.length;i++){ doc.text(lines[i], 40, y); y += lh; }
-          y += 8;
-
-          doc.setFont('helvetica','bold'); doc.text('Results', 40, y); y += lh;
-          doc.setFont('helvetica','normal');
-          doc.text('Time Saved (Annual): ' + fmtHours(data.hoursAnnual) + ' hrs', 40, y); y += lh;
-          doc.text('Time Saved (Monthly): ' + fmtHours(data.hoursMonthly) + ' hrs', 40, y); y += lh;
-          doc.text('Cost Saved (Annual): $' + fmtMoney(data.costAnnual), 40, y); y += lh;
-          doc.text('Cost Saved (Monthly): $' + fmtMoney(data.costMonthly), 40, y); y += lh;
-
-          doc.save('roi-report.pdf');
-          return;
-        } catch(e) { /* CSV fallback */ }
-      }
-      try {
-        var csv = 'Section,Label,Value\n';
-        var u = data.user || {};
-        csv += 'User,Name,' + (u.name||'') + '\n';
-        csv += 'User,Email,' + (u.email||'') + '\n';
-        csv += 'User,Company,' + (u.company||'') + '\n';
-        csv += 'User,Job Title,' + (u.role||'') + '\n';
-        var inp2 = data.inputs;
-        csv += 'Input,Employees,' + inp2.employees + '\n';
-        csv += 'Input,Review cycles/year,' + inp2.cycles + '\n';
-        csv += 'Input,Days per review,' + inp2.daysReview + '\n';
-        csv += 'Input,Birthright apps/month,' + inp2.birthrightPerMonth + '\n';
-        csv += 'Input,Onboardings/month,' + inp2.onboardsPerMonth + '\n';
-        csv += 'Input,Offboardings/month,' + inp2.offboardsPerMonth + '\n';
-        csv += 'Input,Access tickets/day,' + inp2.ticketsPerDay + '\n';
-        csv += 'Input,Minutes per ticket,' + inp2.minutesPerTicket + '\n';
-        csv += 'Input,Avg hourly cost,' + inp2.hourlyCost + '\n';
-        csv += 'Result,Time Saved (Annual hrs),' + fmtHours(data.hoursAnnual) + '\n';
-        csv += 'Result,Time Saved (Monthly hrs),' + fmtHours(data.hoursMonthly) + '\n';
-        csv += 'Result,Cost Saved (Annual),' + fmtMoney(data.costAnnual) + '\n';
-        csv += 'Result,Cost Saved (Monthly),' + fmtMoney(data.costMonthly) + '\n';
-
-        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url; a.download = 'roi-report.csv';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch(e) {}
+    var observer = new MutationObserver(function(mutations){
+        mutations.forEach(function(m){
+            m.addedNodes.forEach(function(n){
+                if (n.nodeType === 1 && (n.id === 'recent-blogs-module' || n.querySelector && n.querySelector('#recent-blogs-module'))) {
+                    tryInit();
+                }
+            });
+        });
     });
-  }
+    observer.observe(document.body, { childList: true, subtree: true });
 
-  function bindDelegated(){
-    // Inputs that trigger derives
-    container.addEventListener('input', function(e){
-      var t = e.target;
-      if (!t) return;
-      if (t.id === 'roi-employees') { autoDeriveAll(); }
-    });
+    function bindEvents(){
+        var searchInput = el('rb-search-input');
+        var clearBtn = el('rb-clear-btn');
+        var searchBtn = el('rb-search-btn');
+        var sortToggle = el('rb-sort-toggle');
+        var sortMenu = el('rb-sort-menu');
+        var loadMoreBtn = el('rb-loadmore');
 
-    // Clicks: open/close/calc actions
-    container.addEventListener('click', function(e){
-      var t = e.target;
+        if (searchInput) {
+            searchInput.addEventListener('input', function(){
+                clearBtn.style.display = this.value ? 'block' : 'none';
+            });
+            searchInput.addEventListener('keypress', function(e){
+                if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+            });
+        }
 
-      if (t && (t.id === 'roi-calc-btn' || (t.closest && t.closest('#roi-calc-btn')))) {
-        e.preventDefault(); calculateAndRender(); return;
-      }
-      if (t && (t.id === 'roi-calc-arrow' || (t.closest && t.closest('#roi-calc-arrow')))) {
-        e.preventDefault(); calculateAndRender(); return;
-      }
-      if (t && (t.id === 'roi-download-btn' || (t.closest && t.closest('#roi-download-btn')))) {
-        e.preventDefault(); openModal(); return;
-      }
-      if (t && (t.id === 'roi-download-arrow' || (t.closest && t.closest('#roi-download-arrow')))) {
-        e.preventDefault(); openModal(); return;
-      }
-      if (t && t.dataset && t.dataset.close === '1') {
-        e.preventDefault(); closeModal(); return;
-      }
-    });
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function(){
+                searchInput.value = '';
+                clearBtn.style.display = 'none';
+                currentSearch = '';
+                fetchPosts(1, true);
+            });
+        }
 
-    // Delegated submit (so it works even if the form gets re-rendered)
-    container.addEventListener('submit', function(ev){
-      var form = ev.target;
-      if (!form || form.id !== 'roi-modal-form') return;
-      // If required inputs are empty, browser will block submit before this fires.
-      ev.preventDefault();
-      var name = (el('roi-name') && el('roi-name').value) || '';
-      var email = (el('roi-email') && el('roi-email').value) || '';
-      var company = (el('roi-company') && el('roi-company').value) || '';
-      var role = (el('roi-role') && el('roi-role').value) || '';
-      var res = calculate();
-      var payload = {
-        user: { name: name, email: email, company: company, role: role },
-        inputs: res.inputs,
-        hoursAnnual: res.hoursAnnual,
-        hoursMonthly: res.hoursMonthly,
-        costAnnual: res.costAnnual,
-        costMonthly: res.costMonthly
-      };
-      closeModal();
-      downloadReport(payload);
-    });
-  }
+        if (searchBtn) {
+            searchBtn.addEventListener('click', doSearch);
+        }
+
+        if (sortToggle && sortMenu) {
+            sortToggle.addEventListener('click', function(e){
+                e.stopPropagation();
+                var expanded = sortMenu.getAttribute('aria-hidden') === 'false';
+                sortMenu.setAttribute('aria-hidden', expanded ? 'true' : 'false');
+                sortToggle.setAttribute('aria-expanded', !expanded);
+            });
+
+            qsa('.rb-sort-menu__item', sortMenu).forEach(function(item){
+                item.addEventListener('click', function(){
+                    currentOrderby = this.dataset.orderby;
+                    currentOrder = this.dataset.order;
+                    sortMenu.setAttribute('aria-hidden', 'true');
+                    fetchPosts(1, true);
+                });
+            });
+
+            document.addEventListener('click', function(){
+                sortMenu.setAttribute('aria-hidden', 'true');
+            });
+        }
+
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', function(){
+                if (page < totalPages && !loading) {
+                    fetchPosts(page + 1, false);
+                }
+            });
+        }
+    }
+
+    function doSearch(){
+        var searchInput = el('rb-search-input');
+        currentSearch = searchInput ? searchInput.value.trim() : '';
+        fetchPosts(1, true);
+    }
+
+    function fetchPosts(pageNum, replace){
+        if (loading) return;
+        loading = true;
+
+        var grid = el('rb-grid');
+        var loadMoreBtn = el('rb-loadmore');
+
+        if (replace) {
+            grid.innerHTML = '<div class="rb-card--skeleton"></div><div class="rb-card--skeleton"></div><div class="rb-card--skeleton"></div>';
+        }
+
+        var params = new URLSearchParams({
+            action: 'recent_blogs_query',
+            page: pageNum,
+            per_page: cfg.perPage || 6,
+            search: currentSearch,
+            orderby: currentOrderby,
+            order: currentOrder
+        });
+
+        fetch(cfg.ajaxUrl + '?' + params.toString())
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                page = data.page || 1;
+                totalPages = data.totalPages || 1;
+
+                if (replace) grid.innerHTML = '';
+
+                if (data.posts && data.posts.length) {
+                    data.posts.forEach(function(post){
+                        grid.insertAdjacentHTML('beforeend', renderCard(post));
+                    });
+                } else if (replace) {
+                    grid.innerHTML = '<p class="rb-empty">No blogs found.</p>';
+                }
+
+                loadMoreBtn.disabled = page >= totalPages;
+                loading = false;
+            })
+            .catch(function(){
+                loading = false;
+                if (replace) grid.innerHTML = '<p class="rb-empty">Error loading blogs.</p>';
+            });
+    }
+
+    function renderCard(post){
+        var dateStr = '';
+        if (post.date) {
+            try {
+                var d = new Date(post.date);
+                dateStr = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            } catch(e) { dateStr = post.date; }
+        }
+        return '<article class="rb-card">' +
+            '<a href="'+escHtml(post.link)+'" class="rb-card__image"><img src="'+escHtml(post.featured)+'" alt="'+escHtml(post.title)+'"></a>' +
+            '<div class="rb-card__body">' +
+                '<h3 class="rb-card__title"><a href="'+escHtml(post.link)+'">'+escHtml(post.title)+'</a></h3>' +
+                '<div class="rb-card__meta"><span>'+escHtml(dateStr)+'</span><span>'+escHtml(post.author)+'</span></div>' +
+                '<a href="'+escHtml(post.link)+'" class="rb-card__cta">Read More</a>' +
+            '</div>' +
+        '</article>';
+    }
+
+    function escHtml(str){
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
 })();
 JS;
-}
+        }
     }
 
     new Recent_Blogs_Module();

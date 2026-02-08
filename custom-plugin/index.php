@@ -128,6 +128,30 @@ include(plugin_dir_path(__FILE__) . '/inc/roi-calculator.php');
 
 /** ROI Calculator **/
 
+/** Core Integrations **/
+
+include(plugin_dir_path(__FILE__) . '/inc/core-integrations.php');
+
+/** Core Integrations **/
+
+/** Help Center **/
+
+include(plugin_dir_path(__FILE__) . '/inc/help-center.php');
+
+/** Help Center **/
+
+/** News Room **/
+
+include(plugin_dir_path(__FILE__) . '/inc/news-room.php');
+
+/** News Room **/
+
+/** White Paper **/
+
+include(plugin_dir_path(__FILE__) . '/inc/white-paper.php');
+
+/** White Paper **/
+
 
 /** PROJECTS **/
 
