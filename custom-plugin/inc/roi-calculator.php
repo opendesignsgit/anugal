@@ -531,16 +531,16 @@ CSS;
     
     // ROI 3 Years with net value
     el('roi-3year-value').innerText = formatPercent(result.roi_3y);
-    var net3Y = isUS ? result.net_3y_usd : result.net_3y_eur;
-    if (net3Y >= 0) {
-      el('roi-3year-net').innerText = 'Net: ' + currSymbol + formatNumber(net3Y);
+    var net3Year = isUS ? result.net_3y_usd : result.net_3y_eur;
+    if (net3Year >= 0) {
+      el('roi-3year-net').innerText = 'Net: ' + currSymbol + formatNumber(net3Year);
     } else {
-      el('roi-3year-net').innerText = 'Net: -' + currSymbol + formatNumber(Math.abs(net3Y));
+      el('roi-3year-net').innerText = 'Net: -' + currSymbol + formatNumber(Math.abs(net3Year));
     }
     
     // Payback Period
     if (result.payback_years !== null && result.payback_years > 0) {
-      if (result.payback_years <= 1) {
+      if (result.payback_years < 1) {
         el('roi-payback-value').innerText = Math.round(result.payback_years * 12) + ' months';
       } else if (result.payback_years <= 10) {
         el('roi-payback-value').innerText = result.payback_years.toFixed(1) + ' years';
