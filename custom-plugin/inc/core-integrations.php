@@ -257,20 +257,17 @@ if (!class_exists('Core_Integrations_Module')) {
 .ci-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
 @media (max-width:1024px){.ci-grid{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:640px){.ci-grid{grid-template-columns:1fr}}
-.ci-card{background:#fff;border-radius:16px;border:1px solid #EEE;box-shadow:0 4px 12px rgba(0,0,0,.04);overflow:hidden;padding:28px;transition:box-shadow .2s,transform .2s}
-.ci-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
-.ci-card--featured{background:linear-gradient(135deg,#1e3a8a 0%,#3b5998 50%,#667eea 100%);color:#fff}
-.ci-card--featured .ci-card__title{color:#fff}
-.ci-card--featured .ci-card__title::after{background:rgba(255,255,255,.3)}
-.ci-card--featured .ci-card__desc{color:rgba(255,255,255,.85)}
-.ci-card--featured .ci-card__cta{color:#fff}
+.ci-card{background:#fff;border-radius:16px;border:1px solid #EEE;box-shadow:0 4px 12px rgba(0,0,0,.04);overflow:hidden;padding:28px;transition:all .3s ease;cursor:pointer}
+.ci-card:hover{background:linear-gradient(135deg,#1e3a8a 0%,#3b5998 50%,#667eea 100%);box-shadow:0 8px 24px rgba(0,0,0,.12);transform:translateY(-2px)}
+.ci-card:hover .ci-card__title{color:#fff}
+.ci-card:hover .ci-card__title::after{background:rgba(255,255,255,.3)}
+.ci-card:hover .ci-card__desc{color:rgba(255,255,255,.85)}
+.ci-card:hover .ci-card__icon svg{stroke:#fff}
 .ci-card__icon{width:48px;height:48px;margin-bottom:20px}
 .ci-card__icon img{width:100%;height:100%;object-fit:contain}
 .ci-card__title{font-size:20px;font-weight:700;margin:0 0 16px;color:#111;position:relative;padding-bottom:16px}
 .ci-card__title::after{content:'';position:absolute;bottom:0;left:0;width:60px;height:2px;background:#3E54E8}
-.ci-card__desc{font-size:14px;line-height:1.6;color:#555;margin:0 0 20px;min-height:60px}
-.ci-card__cta{font-weight:600;font-size:13px;color:#3E54E8;text-decoration:none;text-transform:uppercase;letter-spacing:.5px}
-.ci-card__cta:hover{text-decoration:underline}
+.ci-card__desc{font-size:14px;line-height:1.6;color:#555;margin:0;min-height:60px}
 .ci-card--skeleton{height:240px;background:linear-gradient(90deg,#f2f2f2 25%,#e9e9e9 37%,#f2f2f2 63%);background-size:400% 100%;animation:ci-shine 1.2s ease infinite;border-radius:16px}
 @keyframes ci-shine{0%{background-position:0% 0}100%{background-position:100% 0}}
 .ci-loadmore-wrap{display:flex;justify-content:center;padding:40px 0}
@@ -415,8 +412,8 @@ CSS;
                 if (replace) grid.innerHTML = '';
 
                 if (data.posts && data.posts.length) {
-                    data.posts.forEach(function(post, idx){
-                        grid.insertAdjacentHTML('beforeend', renderCard(post, replace && idx === 0 && pageNum === 1));
+                    data.posts.forEach(function(post){
+                        grid.insertAdjacentHTML('beforeend', renderCard(post));
                     });
                 } else if (replace) {
                     grid.innerHTML = '<p class="ci-empty">No integrations found.</p>';
@@ -431,14 +428,12 @@ CSS;
             });
     }
 
-    function renderCard(post, featured){
+    function renderCard(post){
         var iconHtml = post.icon ? '<img src="'+escHtml(post.icon)+'" alt="">' : '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3E54E8" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
-        var featuredClass = featured ? ' ci-card--featured' : '';
-        return '<article class="ci-card'+featuredClass+'">' +
+        return '<article class="ci-card" onclick="window.location.href=\''+escHtml(post.link)+'\'">' +
             '<div class="ci-card__icon">'+iconHtml+'</div>' +
             '<h3 class="ci-card__title">'+escHtml(post.title)+'</h3>' +
             '<p class="ci-card__desc">'+escHtml(post.excerpt)+'</p>' +
-            '<a href="'+escHtml(post.link)+'" class="ci-card__cta">Learn More</a>' +
         '</article>';
     }
 
