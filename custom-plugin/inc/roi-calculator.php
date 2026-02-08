@@ -171,6 +171,7 @@ if (!class_exists('ROI_Calculator_Module')) {
                   <span class="roi-card__percent">%</span>
                 </div>
                 <div class="roi-card__label">Return on Investment<br>Year 1</div>
+                <div class="roi-card__sublabel" id="roi-year1-net"></div>
               </div>
               <div class="roi-card__divider"></div>
 
@@ -180,6 +181,16 @@ if (!class_exists('ROI_Calculator_Module')) {
                   <span class="roi-card__percent">%</span>
                 </div>
                 <div class="roi-card__label">Return on Investment<br>3 Years</div>
+                <div class="roi-card__sublabel" id="roi-3year-net"></div>
+              </div>
+              <div class="roi-card__divider"></div>
+
+              <div class="roi-card__item">
+                <div class="roi-card__value roi-card__value--small">
+                  <span id="roi-payback-value">-</span>
+                </div>
+                <div class="roi-card__label">Payback Period</div>
+                <div class="roi-card__sublabel" id="roi-payback-note"></div>
               </div>
             </div>
           </div>
@@ -220,6 +231,7 @@ if (!class_exists('ROI_Calculator_Module')) {
 .roi-card__item{text-align:center;padding:16px 0}
 .roi-card__divider{height:1px;background:rgba(255,255,255,0.15);margin:0 -24px}
 .roi-card__value{font-size:42px;font-weight:800;display:flex;align-items:baseline;justify-content:center;gap:4px;line-height:1.1}
+.roi-card__value--small{font-size:28px}
 .roi-card__currency{font-size:20px;font-weight:600;opacity:0.9}
 .roi-card__percent{font-size:20px;font-weight:600;opacity:0.9;margin-left:2px}
 .roi-card__label{font-size:14px;opacity:0.9;margin-top:8px;line-height:1.4}
@@ -421,12 +433,22 @@ CSS;
     var net_3y_eur = savings_3y_eur - cost_3y_eur;
     var roi_3y = (net_3y_eur / cost_3y_eur) * 100;
     
+    // Calculate payback period (years to break even)
+    // Net annual benefit after Year 1 = annual_savings - annual_subscription
+    var annual_net_benefit = annual_savings_eur - annual_subscription_eur;
+    var payback_years = null;
+    if (annual_net_benefit > 0) {
+      // Payback = implementation_cost / annual_net_benefit
+      payback_years = implementation_cost_eur / annual_net_benefit;
+    }
+    
     // Step 11: USD conversion
     var fx_rate = CONSTANTS.EUR_TO_USD_RATE;
     var annual_savings_usd = annual_savings_eur * fx_rate;
     var annual_subscription_usd = annual_subscription_eur * fx_rate;
     var implementation_cost_usd = implementation_cost_eur * fx_rate;
     var net_3y_usd = net_3y_eur * fx_rate;
+    var net_year1_usd = net_year1_eur * fx_rate;
     
     return {
       region: inputs.region,
@@ -440,8 +462,12 @@ CSS;
       year1_cost_eur: year1_cost_eur,
       roi_year1: roi_year1,
       roi_3y: roi_3y,
+      net_year1_eur: net_year1_eur,
+      net_year1_usd: net_year1_usd,
       net_3y_eur: net_3y_eur,
-      net_3y_usd: net_3y_usd
+      net_3y_usd: net_3y_usd,
+      payback_years: payback_years,
+      annual_net_benefit: annual_net_benefit
     };
   }
 
@@ -493,11 +519,39 @@ CSS;
       el('roi-impl-alt').innerText = '≈ $' + formatNumber(result.implementation_cost_usd);
     }
     
-    // ROI Year 1
+    // ROI Year 1 with net value
     el('roi-year1-value').innerText = formatPercent(result.roi_year1);
+    var netYear1 = isUS ? result.net_year1_usd : result.net_year1_eur;
+    var currSymbol = isUS ? '$' : '€';
+    if (netYear1 >= 0) {
+      el('roi-year1-net').innerText = 'Net: ' + currSymbol + formatNumber(netYear1);
+    } else {
+      el('roi-year1-net').innerText = 'Net: -' + currSymbol + formatNumber(Math.abs(netYear1));
+    }
     
-    // ROI 3 Years
+    // ROI 3 Years with net value
     el('roi-3year-value').innerText = formatPercent(result.roi_3y);
+    var net3Y = isUS ? result.net_3y_usd : result.net_3y_eur;
+    if (net3Y >= 0) {
+      el('roi-3year-net').innerText = 'Net: ' + currSymbol + formatNumber(net3Y);
+    } else {
+      el('roi-3year-net').innerText = 'Net: -' + currSymbol + formatNumber(Math.abs(net3Y));
+    }
+    
+    // Payback Period
+    if (result.payback_years !== null && result.payback_years > 0) {
+      if (result.payback_years <= 1) {
+        el('roi-payback-value').innerText = Math.round(result.payback_years * 12) + ' months';
+      } else if (result.payback_years <= 10) {
+        el('roi-payback-value').innerText = result.payback_years.toFixed(1) + ' years';
+      } else {
+        el('roi-payback-value').innerText = '10+ years';
+      }
+      el('roi-payback-note').innerText = 'Time to recover implementation cost';
+    } else {
+      el('roi-payback-value').innerText = 'N/A';
+      el('roi-payback-note').innerText = 'Savings do not cover annual costs';
+    }
   }
 
   function showErrors(errors) {
