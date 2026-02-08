@@ -90,10 +90,12 @@ if (!class_exists('Help_Center_Module')) {
 
         public function shortcode($atts = array()) {
             $atts = shortcode_atts(array(
-                'title'     => 'Help',
-                'title_accent' => 'Center',
-                'subtitle'  => 'Find answers to your questions and learn how to get the most out of Anugal',
-                'per_page'  => 6,
+                'title'          => 'Help',
+                'title_accent'   => 'Center',
+                'subtitle'       => 'Find answers to your questions and learn how to get the most out of Anugal',
+                'per_page'       => 6,
+                'excerpt_length' => 120,
+                'category'       => '',
             ), $atts, 'help_center');
 
             // Styles
@@ -106,10 +108,12 @@ if (!class_exists('Help_Center_Module')) {
             wp_enqueue_script('help-center-inline-script');
 
             $data = array(
-                'restUrl'   => esc_url_raw(get_rest_url()),
-                'siteUrl'   => home_url(),
-                'ajaxUrl'   => admin_url('admin-ajax.php'),
-                'perPage'   => max(1, (int) $atts['per_page']),
+                'restUrl'       => esc_url_raw(get_rest_url()),
+                'siteUrl'       => home_url(),
+                'ajaxUrl'       => admin_url('admin-ajax.php'),
+                'perPage'       => max(1, (int) $atts['per_page']),
+                'excerptLength' => max(1, (int) $atts['excerpt_length']),
+                'category'      => sanitize_text_field($atts['category']),
             );
             wp_add_inline_script('help-center-inline-script', 'window.HelpCenterData = ' . wp_json_encode($data) . ';', 'before');
             wp_add_inline_script('help-center-inline-script', $this->inline_js(), 'after');
@@ -161,11 +165,13 @@ if (!class_exists('Help_Center_Module')) {
         }
 
         public function ajax_query() {
-            $per_page = isset($_REQUEST['per_page']) ? max(1, (int) $_REQUEST['per_page']) : 6;
-            $page     = isset($_REQUEST['page']) ? max(1, (int) $_REQUEST['page']) : 1;
-            $search   = isset($_REQUEST['search']) ? sanitize_text_field($_REQUEST['search']) : '';
-            $orderby  = isset($_REQUEST['orderby']) ? sanitize_key($_REQUEST['orderby']) : 'date';
-            $order    = isset($_REQUEST['order']) ? strtolower(sanitize_key($_REQUEST['order'])) : 'desc';
+            $per_page       = isset($_REQUEST['per_page']) ? max(1, (int) $_REQUEST['per_page']) : 6;
+            $page           = isset($_REQUEST['page']) ? max(1, (int) $_REQUEST['page']) : 1;
+            $search         = isset($_REQUEST['search']) ? sanitize_text_field($_REQUEST['search']) : '';
+            $orderby        = isset($_REQUEST['orderby']) ? sanitize_key($_REQUEST['orderby']) : 'date';
+            $order          = isset($_REQUEST['order']) ? strtolower(sanitize_key($_REQUEST['order'])) : 'desc';
+            $excerpt_length = isset($_REQUEST['excerpt_length']) ? max(1, (int) $_REQUEST['excerpt_length']) : 120;
+            $category       = isset($_REQUEST['category']) ? sanitize_text_field($_REQUEST['category']) : '';
 
             if (!in_array($orderby, array('date','title','ID','modified'))) $orderby = 'date';
             if (!in_array($order, array('asc','desc'))) $order = 'desc';
@@ -181,11 +187,22 @@ if (!class_exists('Help_Center_Module')) {
                 'no_found_rows'  => false,
             );
 
+            // Filter by category if provided
+            if (!empty($category)) {
+                $args['tax_query'] = array(
+                    array(
+                        'taxonomy' => 'help_category',
+                        'field'    => is_numeric($category) ? 'term_id' : 'slug',
+                        'terms'    => $category,
+                    ),
+                );
+            }
+
             $q = new WP_Query($args);
 
             $items = array();
             foreach ($q->posts as $p) {
-                $items[] = $this->serialize_post($p);
+                $items[] = $this->serialize_post($p, $excerpt_length);
             }
 
             $resp = array(
@@ -197,10 +214,21 @@ if (!class_exists('Help_Center_Module')) {
             wp_send_json($resp);
         }
 
-        private function serialize_post($p) {
+        private function serialize_post($p, $excerpt_length = 120) {
             $title = get_the_title($p);
             $link  = get_permalink($p);
             $excerpt = get_the_excerpt($p);
+
+            // Truncate excerpt to character limit
+            if (!empty($excerpt) && mb_strlen($excerpt) > $excerpt_length) {
+                $excerpt = mb_substr($excerpt, 0, $excerpt_length);
+                // Avoid cutting in the middle of a word
+                $last_space = mb_strrpos($excerpt, ' ');
+                if ($last_space !== false && $last_space > $excerpt_length * 0.8) {
+                    $excerpt = mb_substr($excerpt, 0, $last_space);
+                }
+                $excerpt = rtrim($excerpt, '.,!? ') . '...';
+            }
 
             return array(
                 'id'       => (int) $p->ID,
@@ -373,6 +401,8 @@ CSS;
             action: 'help_center_query',
             page: pageNum,
             per_page: cfg.perPage || 6,
+            excerpt_length: cfg.excerptLength || 120,
+            category: cfg.category || '',
             search: currentSearch,
             orderby: currentOrderby,
             order: currentOrder
