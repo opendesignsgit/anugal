@@ -246,6 +246,8 @@ CSS;
     REVIEW_PARTICIPATION_FACTOR: 0.35,
     COST_PER_HOUR_EUR: 50,
     TICKETS_PER_100_EMPLOYEES: 2,
+    REVIEWER_POOL_PERCENT: 0.10,
+    // EUR to USD rate for estimation purposes only - actual rates may vary
     EUR_TO_USD_RATE: 1.08
   };
 
@@ -396,7 +398,7 @@ CSS;
     // Review hours saved
     var reviewer_pool;
     if (inputs.employee_count <= 500) {
-      reviewer_pool = Math.round(total_identities * 0.10);
+      reviewer_pool = Math.round(total_identities * CONSTANTS.REVIEWER_POOL_PERCENT);
     } else {
       reviewer_pool = am_count;
     }
