@@ -255,7 +255,7 @@ CSS;
   // Configuration - can be externalized in future
   var CONFIG = {
     DEBOUNCE_DELAY: 400,
-    ANIMATION_DURATION: 750
+    ANIMATION_DURATION: 750 // Reserved for Phase 2 animated number updates
   };
 
   // Constants from the algorithm specification
@@ -514,12 +514,17 @@ CSS;
   }
 
   function formatPercent(n) {
-    // Handle edge cases to prevent NaN
+    // Handle edge cases to prevent NaN/Infinity display
+    // Returns 0 for invalid values as a safe fallback for display
     if (!isFinite(n)) return 0;
     return Math.round(n);
   }
 
-  // Get ROI status indicator
+  // Get ROI status indicator based on industry-standard thresholds:
+  // - < 0%: Investment not recovered within period (Low)
+  // - 0-50%: Partial return, typical for first-year with implementation costs (Moderate)
+  // - 50-150%: Healthy return, good investment value (Strong)
+  // - > 150%: Exceptional return, high-value scenario (Excellent)
   function getROIStatus(roi) {
     if (roi < 0) {
       return { label: 'Low ROI', className: 'roi-card__status--low' };
@@ -532,7 +537,7 @@ CSS;
     }
   }
 
-  // Format payback period as years + months
+  // Format payback period as years + months for better readability
   function formatPaybackPeriod(years) {
     if (years === null || years <= 0 || !isFinite(years)) {
       return null;
@@ -668,6 +673,14 @@ CSS;
     renderResults(result);
   }
 
+  // Check if minimum required inputs are present for calculation
+  function hasMinimumRequiredInputs(inputs) {
+    return inputs.region && 
+           inputs.employee_count >= 1 && 
+           inputs.connected_apps >= 1 && 
+           inputs.review_cycles_per_year;
+  }
+
   // Live calculation handler (for debounced input events)
   function handleLiveCalculate() {
     var inputs = getInputs();
@@ -680,7 +693,7 @@ CSS;
     lastInputHash = inputHash;
     
     // Only run live calculation if required fields have values
-    if (inputs.region && inputs.employee_count >= 1 && inputs.connected_apps >= 1 && inputs.review_cycles_per_year) {
+    if (hasMinimumRequiredInputs(inputs)) {
       var errors = validateInputs(inputs);
       if (errors.length === 0) {
         var result = calculate(inputs);
