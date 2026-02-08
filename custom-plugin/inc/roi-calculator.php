@@ -307,10 +307,12 @@ CSS;
   function sanitizeInputs(inputs) {
     var result = Object.assign({}, inputs);
     
-    if (result.employee_count !== null && result.employee_count !== 0) {
+    // Clamp numeric fields to their valid ranges
+    // Note: For employee_count and connected_apps, 0 values are left as-is for validation to catch
+    if (result.employee_count > 0) {
       result.employee_count = clamp(result.employee_count, INPUT_LIMITS.employee_count.min, INPUT_LIMITS.employee_count.max);
     }
-    if (result.connected_apps !== null && result.connected_apps !== 0) {
+    if (result.connected_apps > 0) {
       result.connected_apps = clamp(result.connected_apps, INPUT_LIMITS.connected_apps.min, INPUT_LIMITS.connected_apps.max);
     }
     if (result.am_percent !== null) {
@@ -459,12 +461,12 @@ CSS;
     var sanitized = sanitizeInputs(rawInputs);
     var inputs = applyDefaults(sanitized);
     
-    // Step 4: Derive daily tickets if blank
+    // Step 4: Derive daily tickets if blank (use inputs which has defaults applied)
     var daily_tickets;
-    if (rawInputs.daily_access_tickets === null) {
+    if (sanitized.daily_access_tickets === null) {
       daily_tickets = Math.ceil(inputs.employee_count / 100) * CONSTANTS.TICKETS_PER_100_EMPLOYEES;
     } else {
-      daily_tickets = sanitized.daily_access_tickets;
+      daily_tickets = inputs.daily_access_tickets; // Use inputs to ensure consistency
     }
     
     // Step 5: Define identity counts
@@ -498,11 +500,13 @@ CSS;
     var ticket_hours_saved = ticket_hours_baseline * CONSTANTS.TICKET_EFFICIENCY_GAIN;
     
     // Review hours saved with safety guards
+    // Note: Minimum reviewer_pool of 1 is intentional - even very small orgs have at least one reviewer
+    // This prevents division by zero and reflects realistic minimum staffing
     var reviewer_pool;
     if (inputs.employee_count <= 500) {
-      reviewer_pool = Math.max(1, Math.round(total_identities * CONSTANTS.REVIEWER_POOL_PERCENT)); // Safety: minimum 1
+      reviewer_pool = Math.max(1, Math.round(total_identities * CONSTANTS.REVIEWER_POOL_PERCENT));
     } else {
-      reviewer_pool = Math.max(1, am_count); // Safety: minimum 1
+      reviewer_pool = Math.max(1, am_count);
     }
     
     var active_reviewers = reviewer_pool * CONSTANTS.REVIEW_PARTICIPATION_FACTOR;
