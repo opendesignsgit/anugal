@@ -81,14 +81,14 @@ if (!class_exists('ROI_Calculator_Module')) {
                 </div>
                 <div class="roi-field">
                   <label class="roi-label" for="roi-employees">Total Number of Employees<span class="roi-required">*</span></label>
-                  <input id="roi-employees" type="number" min="1" step="1" class="roi-input" required>
+                  <input id="roi-employees" type="number" min="1" max="100000" step="1" class="roi-input" required>
                 </div>
               </div>
 
               <div class="roi-row">
                 <div class="roi-field">
                   <label class="roi-label" for="roi-apps">No. of Applications you want to Govern<span class="roi-required">*</span></label>
-                  <input id="roi-apps" type="number" min="1" step="1" class="roi-input" required>
+                  <input id="roi-apps" type="number" min="1" max="200" step="1" class="roi-input" required>
                 </div>
                 <div class="roi-field">
                   <label class="roi-label" for="roi-am-percent">% of People Who Operate or Approve Access</label>
@@ -120,7 +120,7 @@ if (!class_exists('ROI_Calculator_Module')) {
                 </div>
                 <div class="roi-field">
                   <label class="roi-label" for="roi-daily-tickets">Approximate No. of Access related Tickets Per Day</label>
-                  <input id="roi-daily-tickets" type="number" min="0" step="1" class="roi-input" placeholder="Auto-derived if empty">
+                  <input id="roi-daily-tickets" type="number" min="0" max="500" step="1" class="roi-input" placeholder="Auto-derived if empty">
                 </div>
               </div>
 
@@ -130,6 +130,7 @@ if (!class_exists('ROI_Calculator_Module')) {
               </div>
 
               <div id="roi-errors" class="roi-errors" aria-live="polite"></div>
+              <div id="roi-warnings" class="roi-warnings" aria-live="polite"></div>
             </form>
           </div>
 
@@ -227,6 +228,7 @@ if (!class_exists('ROI_Calculator_Module')) {
 .roi-btn--arrow{background:#111827;color:#fff;width:48px;height:48px;display:flex;align-items:center;justify-content:center;padding:0;font-size:18px}
 .roi-btn--arrow:hover{background:#1F2937}
 .roi-errors{margin-top:12px;color:#E53935;font-size:13px;min-height:20px}
+.roi-warnings{margin-top:8px;color:#D97706;font-size:12px;font-style:italic}
 .roi-right{display:flex;align-items:flex-start;position:sticky;top:24px}
 @media (max-width:1024px){.roi-right{position:static}}
 .roi-card{width:100%;background:linear-gradient(160deg, #1E3A8A 0%, #4338CA 50%, #6366F1 100%);border-radius:16px;color:#fff;box-shadow:0 16px 40px rgba(0,0,0,0.25);padding:28px 24px;display:flex;flex-direction:column}
@@ -277,6 +279,16 @@ CSS;
     EUR_TO_USD_RATE: 1.08
   };
 
+  // Input limits for validation and sanitization
+  var INPUT_LIMITS = {
+    employee_count: { min: 1, max: 100000 },
+    connected_apps: { min: 1, max: 200 },
+    am_percent: { min: 0, max: 1 },
+    cli_percent: { min: 0, max: 1 },
+    days_per_review: { min: 1, max: 30 },
+    daily_access_tickets: { min: 0, max: 500 }
+  };
+
   var container = null;
   var initialized = false;
   var debounceTimer = null;
@@ -284,6 +296,54 @@ CSS;
 
   function el(id) {
     return document.getElementById(id);
+  }
+
+  // Clamp utility to keep value within bounds
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  // Sanitize inputs by clamping values to valid ranges
+  function sanitizeInputs(inputs) {
+    var result = Object.assign({}, inputs);
+    
+    if (result.employee_count !== null && result.employee_count !== 0) {
+      result.employee_count = clamp(result.employee_count, INPUT_LIMITS.employee_count.min, INPUT_LIMITS.employee_count.max);
+    }
+    if (result.connected_apps !== null && result.connected_apps !== 0) {
+      result.connected_apps = clamp(result.connected_apps, INPUT_LIMITS.connected_apps.min, INPUT_LIMITS.connected_apps.max);
+    }
+    if (result.am_percent !== null) {
+      result.am_percent = clamp(result.am_percent, INPUT_LIMITS.am_percent.min, INPUT_LIMITS.am_percent.max);
+    }
+    if (result.cli_percent !== null) {
+      result.cli_percent = clamp(result.cli_percent, INPUT_LIMITS.cli_percent.min, INPUT_LIMITS.cli_percent.max);
+    }
+    if (result.days_per_review !== null) {
+      result.days_per_review = clamp(result.days_per_review, INPUT_LIMITS.days_per_review.min, INPUT_LIMITS.days_per_review.max);
+    }
+    if (result.daily_access_tickets !== null) {
+      result.daily_access_tickets = clamp(result.daily_access_tickets, INPUT_LIMITS.daily_access_tickets.min, INPUT_LIMITS.daily_access_tickets.max);
+    }
+    
+    return result;
+  }
+
+  // Get warnings for edge cases (informational, don't block calculation)
+  function getWarnings(inputs, result) {
+    var warnings = [];
+    
+    // Large organisation warning
+    if (inputs.employee_count > 50000) {
+      warnings.push('Large organisation detected (>50,000 employees). Results are estimates.');
+    }
+    
+    // Low efficiency warning
+    if (result && result.hours_saved_annual < 50) {
+      warnings.push('Very low efficiency savings (<50 hours/year). Consider reviewing input values.');
+    }
+    
+    return warnings;
   }
 
   // Debounce utility for live calculation
@@ -395,32 +455,34 @@ CSS;
   }
 
   function calculate(rawInputs) {
-    var inputs = applyDefaults(rawInputs);
+    // Sanitize inputs first, then apply defaults
+    var sanitized = sanitizeInputs(rawInputs);
+    var inputs = applyDefaults(sanitized);
     
     // Step 4: Derive daily tickets if blank
     var daily_tickets;
     if (rawInputs.daily_access_tickets === null) {
       daily_tickets = Math.ceil(inputs.employee_count / 100) * CONSTANTS.TICKETS_PER_100_EMPLOYEES;
     } else {
-      daily_tickets = rawInputs.daily_access_tickets;
+      daily_tickets = sanitized.daily_access_tickets;
     }
     
     // Step 5: Define identity counts
     var total_identities = inputs.employee_count;
     var cli_count = Math.round(total_identities * inputs.cli_percent);
     
-    // Step 6: Subscription pricing
+    // Step 6: Subscription pricing with safety guards
     var monthly_subscription_eur;
     var am_count = 0;
     var non_cli_count = 0;
     var id_count = 0;
     
     if (inputs.employee_count <= 500) {
-      non_cli_count = total_identities - cli_count;
+      non_cli_count = Math.max(0, total_identities - cli_count); // Safety: prevent negative
       monthly_subscription_eur = (non_cli_count * 4.00) + (cli_count * 0.75);
     } else {
       am_count = Math.round(total_identities * inputs.am_percent);
-      id_count = total_identities - am_count - cli_count;
+      id_count = Math.max(0, total_identities - am_count - cli_count); // Safety: prevent negative
       monthly_subscription_eur = (am_count * 4.00) + (id_count * 2.00) + (cli_count * 0.75);
     }
     
@@ -435,31 +497,31 @@ CSS;
     var ticket_hours_baseline = daily_tickets * CONSTANTS.WORK_DAYS_PER_YEAR * (CONSTANTS.AVG_TICKET_MINUTES / 60);
     var ticket_hours_saved = ticket_hours_baseline * CONSTANTS.TICKET_EFFICIENCY_GAIN;
     
-    // Review hours saved
+    // Review hours saved with safety guards
     var reviewer_pool;
     if (inputs.employee_count <= 500) {
-      reviewer_pool = Math.round(total_identities * CONSTANTS.REVIEWER_POOL_PERCENT);
+      reviewer_pool = Math.max(1, Math.round(total_identities * CONSTANTS.REVIEWER_POOL_PERCENT)); // Safety: minimum 1
     } else {
-      reviewer_pool = am_count;
+      reviewer_pool = Math.max(1, am_count); // Safety: minimum 1
     }
     
     var active_reviewers = reviewer_pool * CONSTANTS.REVIEW_PARTICIPATION_FACTOR;
     var review_hours_baseline = inputs.review_cycles_per_year * inputs.days_per_review * CONSTANTS.HOURS_PER_DAY * active_reviewers;
     var review_hours_saved = review_hours_baseline * CONSTANTS.REVIEW_EFFICIENCY_GAIN;
     
-    // Total annual hours saved
-    var hours_saved_annual = ticket_hours_saved + review_hours_saved;
+    // Total annual hours saved (ensure non-negative)
+    var hours_saved_annual = Math.max(0, ticket_hours_saved + review_hours_saved);
     
     // Step 9: Convert hours to euros
     var annual_savings_eur = hours_saved_annual * CONSTANTS.COST_PER_HOUR_EUR;
     
-    // Step 10: ROI calculations
+    // Step 10: ROI calculations with division safety
     var net_year1_eur = annual_savings_eur - year1_cost_eur;
-    var roi_year1 = (net_year1_eur / year1_cost_eur) * 100;
+    var roi_year1 = year1_cost_eur > 0 ? (net_year1_eur / year1_cost_eur) * 100 : 0; // Division safety
     
     var savings_3y_eur = annual_savings_eur * 3;
     var net_3y_eur = savings_3y_eur - cost_3y_eur;
-    var roi_3y = (net_3y_eur / cost_3y_eur) * 100;
+    var roi_3y = cost_3y_eur > 0 ? (net_3y_eur / cost_3y_eur) * 100 : 0; // Division safety
     
     // Calculate payback period (years to break even)
     // Net annual benefit after Year 1 = annual_savings - annual_subscription
@@ -638,6 +700,16 @@ CSS;
     errorsEl.innerHTML = messages.join('<br>');
   }
 
+  function showWarnings(warnings) {
+    var warningsEl = el('roi-warnings');
+    if (!warningsEl) return;
+    if (warnings.length === 0) {
+      warningsEl.innerHTML = '';
+      return;
+    }
+    warningsEl.innerHTML = warnings.map(function(w) { return '⚠ ' + w; }).join('<br>');
+  }
+
   function clearFieldErrors() {
     var inputs = container.querySelectorAll('.roi-input');
     for (var i = 0; i < inputs.length; i++) {
@@ -656,12 +728,33 @@ CSS;
     }
   }
 
+  // Validate output values to ensure they are safe for display
+  function safeOutput(result) {
+    var safe = Object.assign({}, result);
+    
+    // Convert any NaN, Infinity, or invalid values to safe defaults
+    for (var key in safe) {
+      if (typeof safe[key] === 'number') {
+        if (!isFinite(safe[key])) {
+          safe[key] = 0;
+        }
+        // Ensure hours are never negative
+        if (key === 'hours_saved_annual' && safe[key] < 0) {
+          safe[key] = 0;
+        }
+      }
+    }
+    
+    return safe;
+  }
+
   function handleCalculate() {
     var inputs = getInputs();
     var errors = validateInputs(inputs);
     
     if (errors.length > 0) {
       showErrors(errors);
+      showWarnings([]);
       highlightErrors(errors);
       return;
     }
@@ -670,7 +763,13 @@ CSS;
     clearFieldErrors();
     
     var result = calculate(inputs);
-    renderResults(result);
+    var safeResult = safeOutput(result);
+    
+    // Check for warnings
+    var warnings = getWarnings(inputs, safeResult);
+    showWarnings(warnings);
+    
+    renderResults(safeResult);
   }
 
   // Check if minimum required inputs are present for calculation
@@ -697,7 +796,10 @@ CSS;
       var errors = validateInputs(inputs);
       if (errors.length === 0) {
         var result = calculate(inputs);
-        renderResults(result);
+        var safeResult = safeOutput(result);
+        var warnings = getWarnings(inputs, safeResult);
+        showWarnings(warnings);
+        renderResults(safeResult);
       }
     }
   }
