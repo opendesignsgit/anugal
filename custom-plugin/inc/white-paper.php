@@ -229,9 +229,9 @@ if (!class_exists('White_Paper_Module')) {
             // Truncate excerpt to character limit
             if (!empty($excerpt) && mb_strlen($excerpt) > $excerpt_length) {
                 $excerpt = mb_substr($excerpt, 0, $excerpt_length);
-                // Avoid cutting in the middle of a word
+                // Avoid cutting in the middle of a word - break on last space if it's not too early
                 $last_space = mb_strrpos($excerpt, ' ');
-                if ($last_space !== false && $last_space > $excerpt_length * 0.8) {
+                if ($last_space !== false && $last_space > mb_strlen($excerpt) * 0.8) {
                     $excerpt = mb_substr($excerpt, 0, $last_space);
                 }
                 $excerpt = rtrim($excerpt, '.,!? ') . '...';
