@@ -137,11 +137,11 @@ if (!class_exists('ROI_Calculator_Module')) {
             <div class="roi-card">
               <div class="roi-card__item">
                 <div class="roi-card__value">
-                  <span class="roi-card__currency" id="roi-efficiency-currency">$</span>
                   <span id="roi-efficiency-value">0</span>
+                  <span class="roi-card__unit">hrs</span>
                 </div>
                 <div class="roi-card__label">Operational Efficiency<br>Gained</div>
-                <div class="roi-card__sublabel" id="roi-efficiency-hours"></div>
+                <div class="roi-card__sublabel" id="roi-efficiency-monetary"></div>
               </div>
               <div class="roi-card__divider"></div>
 
@@ -172,6 +172,7 @@ if (!class_exists('ROI_Calculator_Module')) {
                 </div>
                 <div class="roi-card__label">Return on Investment<br>Year 1</div>
                 <div class="roi-card__sublabel" id="roi-year1-net"></div>
+                <div class="roi-card__status" id="roi-year1-status"></div>
               </div>
               <div class="roi-card__divider"></div>
 
@@ -182,6 +183,7 @@ if (!class_exists('ROI_Calculator_Module')) {
                 </div>
                 <div class="roi-card__label">Return on Investment<br>3 Years</div>
                 <div class="roi-card__sublabel" id="roi-3year-net"></div>
+                <div class="roi-card__status" id="roi-3year-status"></div>
               </div>
               <div class="roi-card__divider"></div>
 
@@ -233,9 +235,15 @@ if (!class_exists('ROI_Calculator_Module')) {
 .roi-card__value{font-size:42px;font-weight:800;display:flex;align-items:baseline;justify-content:center;gap:4px;line-height:1.1}
 .roi-card__value--small{font-size:28px}
 .roi-card__currency{font-size:20px;font-weight:600;opacity:0.9}
+.roi-card__unit{font-size:16px;font-weight:600;opacity:0.85}
 .roi-card__percent{font-size:20px;font-weight:600;opacity:0.9;margin-left:2px}
 .roi-card__label{font-size:14px;opacity:0.9;margin-top:8px;line-height:1.4}
 .roi-card__sublabel{font-size:12px;opacity:0.7;margin-top:4px}
+.roi-card__status{font-size:11px;font-weight:600;margin-top:6px;padding:3px 10px;border-radius:12px;display:inline-block}
+.roi-card__status--low{background:rgba(239,68,68,0.25);color:#FCA5A5}
+.roi-card__status--moderate{background:rgba(251,191,36,0.25);color:#FCD34D}
+.roi-card__status--strong{background:rgba(34,197,94,0.25);color:#86EFAC}
+.roi-card__status--excellent{background:rgba(16,185,129,0.3);color:#6EE7B7}
 CSS;
     }
 
@@ -243,6 +251,12 @@ CSS;
       return <<<'JS'
 (function(){
   "use strict";
+
+  // Configuration - can be externalized in future
+  var CONFIG = {
+    DEBOUNCE_DELAY: 400,
+    ANIMATION_DURATION: 750
+  };
 
   // Constants from the algorithm specification
   var CONSTANTS = {
@@ -265,9 +279,23 @@ CSS;
 
   var container = null;
   var initialized = false;
+  var debounceTimer = null;
+  var lastInputHash = null;
 
   function el(id) {
     return document.getElementById(id);
+  }
+
+  // Debounce utility for live calculation
+  function debounce(fn, delay) {
+    return function() {
+      var args = arguments;
+      var context = this;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function() {
+        fn.apply(context, args);
+      }, delay);
+    };
   }
 
   function tryInit() {
@@ -480,73 +508,109 @@ CSS;
     }
   }
 
+  // Enterprise rounding: nearest 100 for subscription/savings, 500 for implementation
+  function roundToNearest(n, nearest) {
+    return Math.round(n / nearest) * nearest;
+  }
+
   function formatPercent(n) {
+    // Handle edge cases to prevent NaN
+    if (!isFinite(n)) return 0;
     return Math.round(n);
+  }
+
+  // Get ROI status indicator
+  function getROIStatus(roi) {
+    if (roi < 0) {
+      return { label: 'Low ROI', className: 'roi-card__status--low' };
+    } else if (roi < 50) {
+      return { label: 'Moderate ROI', className: 'roi-card__status--moderate' };
+    } else if (roi <= 150) {
+      return { label: 'Strong ROI', className: 'roi-card__status--strong' };
+    } else {
+      return { label: 'Excellent ROI', className: 'roi-card__status--excellent' };
+    }
+  }
+
+  // Format payback period as years + months
+  function formatPaybackPeriod(years) {
+    if (years === null || years <= 0 || !isFinite(years)) {
+      return null;
+    }
+    if (years > 10) {
+      return '10+ years';
+    }
+    var wholeYears = Math.floor(years);
+    var months = Math.round((years - wholeYears) * 12);
+    if (months === 12) {
+      wholeYears++;
+      months = 0;
+    }
+    if (wholeYears === 0) {
+      return months + ' month' + (months !== 1 ? 's' : '');
+    } else if (months === 0) {
+      return wholeYears + ' year' + (wholeYears !== 1 ? 's' : '');
+    } else {
+      return wholeYears + ' yr ' + months + ' mo';
+    }
   }
 
   function renderResults(result) {
     var isUS = result.region === 'US';
-    
-    // Operational Efficiency Gained (in hours saved * cost per hour)
-    if (isUS) {
-      el('roi-efficiency-currency').innerText = '$';
-      el('roi-efficiency-value').innerText = formatNumber(result.annual_savings_usd);
-    } else {
-      el('roi-efficiency-currency').innerText = '€';
-      el('roi-efficiency-value').innerText = formatNumber(result.annual_savings_eur);
-    }
-    el('roi-efficiency-hours').innerText = formatNumber(result.hours_saved_annual) + ' hours saved/year';
-    
-    // Subscription Cost (Annual)
-    if (isUS) {
-      el('roi-subscription-currency').innerText = '$';
-      el('roi-subscription-value').innerText = formatNumber(result.annual_subscription_usd);
-      el('roi-subscription-alt').innerText = '≈ €' + formatNumber(result.annual_subscription_eur);
-    } else {
-      el('roi-subscription-currency').innerText = '€';
-      el('roi-subscription-value').innerText = formatNumber(result.annual_subscription_eur);
-      el('roi-subscription-alt').innerText = '≈ $' + formatNumber(result.annual_subscription_usd);
-    }
-    
-    // Implementation Cost (One-Time)
-    if (isUS) {
-      el('roi-impl-currency').innerText = '$';
-      el('roi-impl-value').innerText = formatNumber(result.implementation_cost_usd);
-      el('roi-impl-alt').innerText = '≈ €' + formatNumber(result.implementation_cost_eur);
-    } else {
-      el('roi-impl-currency').innerText = '€';
-      el('roi-impl-value').innerText = formatNumber(result.implementation_cost_eur);
-      el('roi-impl-alt').innerText = '≈ $' + formatNumber(result.implementation_cost_usd);
-    }
-    
-    // ROI Year 1 with net value
-    el('roi-year1-value').innerText = formatPercent(result.roi_year1);
-    var netYear1 = isUS ? result.net_year1_usd : result.net_year1_eur;
     var currSymbol = isUS ? '$' : '€';
-    if (netYear1 >= 0) {
-      el('roi-year1-net').innerText = 'Net: ' + currSymbol + formatNumber(netYear1);
-    } else {
-      el('roi-year1-net').innerText = 'Net: -' + currSymbol + formatNumber(Math.abs(netYear1));
-    }
     
-    // ROI 3 Years with net value
-    el('roi-3year-value').innerText = formatPercent(result.roi_3y);
+    // Operational Efficiency Gained - Hours as primary, monetary as secondary
+    el('roi-efficiency-value').innerText = formatNumber(Math.round(result.hours_saved_annual));
+    var savingsRounded = roundToNearest(isUS ? result.annual_savings_usd : result.annual_savings_eur, 100);
+    el('roi-efficiency-monetary').innerText = '≈ ' + currSymbol + formatNumber(savingsRounded) + '/year';
+    
+    // Subscription Cost (Annual) - rounded to nearest 100
+    var subscriptionRounded = roundToNearest(isUS ? result.annual_subscription_usd : result.annual_subscription_eur, 100);
+    el('roi-subscription-currency').innerText = currSymbol;
+    el('roi-subscription-value').innerText = formatNumber(subscriptionRounded);
+    var subscriptionAlt = roundToNearest(isUS ? result.annual_subscription_eur : result.annual_subscription_usd, 100);
+    el('roi-subscription-alt').innerText = '≈ ' + (isUS ? '€' : '$') + formatNumber(subscriptionAlt);
+    
+    // Implementation Cost (One-Time) - rounded to nearest 500
+    var implRounded = roundToNearest(isUS ? result.implementation_cost_usd : result.implementation_cost_eur, 500);
+    el('roi-impl-currency').innerText = currSymbol;
+    el('roi-impl-value').innerText = formatNumber(implRounded);
+    var implAlt = roundToNearest(isUS ? result.implementation_cost_eur : result.implementation_cost_usd, 500);
+    el('roi-impl-alt').innerText = '≈ ' + (isUS ? '€' : '$') + formatNumber(implAlt);
+    
+    // ROI Year 1 with net value and status indicator
+    var roi1 = formatPercent(result.roi_year1);
+    el('roi-year1-value').innerText = roi1;
+    var netYear1 = isUS ? result.net_year1_usd : result.net_year1_eur;
+    if (netYear1 >= 0) {
+      el('roi-year1-net').innerText = 'Net: ' + currSymbol + formatNumber(roundToNearest(netYear1, 100));
+    } else {
+      // Neutral messaging for negative ROI
+      el('roi-year1-net').innerText = 'Investment recovered after Year 1';
+    }
+    var status1 = getROIStatus(result.roi_year1);
+    var statusEl1 = el('roi-year1-status');
+    statusEl1.innerText = status1.label;
+    statusEl1.className = 'roi-card__status ' + status1.className;
+    
+    // ROI 3 Years with net value and status indicator
+    var roi3 = formatPercent(result.roi_3y);
+    el('roi-3year-value').innerText = roi3;
     var net3Year = isUS ? result.net_3y_usd : result.net_3y_eur;
     if (net3Year >= 0) {
-      el('roi-3year-net').innerText = 'Net: ' + currSymbol + formatNumber(net3Year);
+      el('roi-3year-net').innerText = 'Net: ' + currSymbol + formatNumber(roundToNearest(net3Year, 100));
     } else {
-      el('roi-3year-net').innerText = 'Net: -' + currSymbol + formatNumber(Math.abs(net3Year));
+      el('roi-3year-net').innerText = 'Investment recovered after 3 years';
     }
+    var status3 = getROIStatus(result.roi_3y);
+    var statusEl3 = el('roi-3year-status');
+    statusEl3.innerText = status3.label;
+    statusEl3.className = 'roi-card__status ' + status3.className;
     
-    // Payback Period
-    if (result.payback_years !== null && result.payback_years > 0) {
-      if (result.payback_years < 1) {
-        el('roi-payback-value').innerText = Math.round(result.payback_years * 12) + ' months';
-      } else if (result.payback_years <= 10) {
-        el('roi-payback-value').innerText = result.payback_years.toFixed(1) + ' years';
-      } else {
-        el('roi-payback-value').innerText = '10+ years';
-      }
+    // Payback Period - formatted as years + months
+    var paybackFormatted = formatPaybackPeriod(result.payback_years);
+    if (paybackFormatted) {
+      el('roi-payback-value').innerText = paybackFormatted;
       el('roi-payback-note').innerText = 'Time to recover implementation cost';
     } else {
       el('roi-payback-value').innerText = 'N/A';
@@ -604,6 +668,29 @@ CSS;
     renderResults(result);
   }
 
+  // Live calculation handler (for debounced input events)
+  function handleLiveCalculate() {
+    var inputs = getInputs();
+    
+    // Create hash of current inputs to avoid redundant calculations
+    var inputHash = JSON.stringify(inputs);
+    if (inputHash === lastInputHash) {
+      return; // Skip if inputs haven't changed
+    }
+    lastInputHash = inputHash;
+    
+    // Only run live calculation if required fields have values
+    if (inputs.region && inputs.employee_count >= 1 && inputs.connected_apps >= 1 && inputs.review_cycles_per_year) {
+      var errors = validateInputs(inputs);
+      if (errors.length === 0) {
+        var result = calculate(inputs);
+        renderResults(result);
+      }
+    }
+  }
+
+  var debouncedLiveCalculate = debounce(handleLiveCalculate, CONFIG.DEBOUNCE_DELAY);
+
   function bindEvents() {
     var calcBtn = el('roi-calc-btn');
     var arrowBtn = el('roi-calc-arrow');
@@ -622,10 +709,18 @@ CSS;
       });
     }
     
-    // Clear errors on input
+    // Live calculation on input change (debounced)
     container.addEventListener('input', function(e) {
       if (e.target && e.target.classList.contains('roi-input')) {
         e.target.classList.remove('roi-input--error');
+        debouncedLiveCalculate();
+      }
+    });
+    
+    // Also trigger on select change
+    container.addEventListener('change', function(e) {
+      if (e.target && e.target.classList.contains('roi-select')) {
+        debouncedLiveCalculate();
       }
     });
   }
