@@ -381,10 +381,10 @@ CSS;
     };
   }
 
-  function applyDefaults(inputs) {
+  // Normalize inputs - convert null values to 0 (all fields are now required)
+  function normalizeInputs(inputs) {
     var result = Object.assign({}, inputs);
     
-    // No defaults - all fields are required now
     if (result.am_percent === null) {
       result.am_percent = 0;
     }
@@ -541,13 +541,14 @@ CSS;
   }
 
   function calculate(rawInputs) {
-    // Sanitize inputs first, then apply defaults
+    // Sanitize inputs first, then normalize null values
     var sanitized = sanitizeInputs(rawInputs);
-    var inputs = applyDefaults(sanitized);
+    var inputs = normalizeInputs(sanitized);
     
-    // Step 4: Derive daily tickets if blank (use inputs which has defaults applied)
-    var daily_tickets;
-    if (sanitized.daily_access_tickets === null) {
+    // All fields are required, so daily_tickets comes from user input
+    var daily_tickets = inputs.daily_access_tickets;
+    if (daily_tickets === 0 && sanitized.daily_access_tickets === null) {
+      // Fallback derivation if somehow null
       daily_tickets = Math.ceil(inputs.employee_count / 100) * CONSTANTS.TICKETS_PER_100_EMPLOYEES;
     } else {
       daily_tickets = inputs.daily_access_tickets; // Use inputs to ensure consistency
