@@ -21,7 +21,11 @@ if (!class_exists('ROI_Calculator_Module')) {
       $atts = shortcode_atts(array(
         'title'    => 'Company',
         'accent'   => 'Profile',
+        'mode'     => 'live', // 'live' = calculate as user types, 'button' = only on button click
       ), $atts, 'roi_calculator');
+      
+      // Validate mode attribute
+      $mode = in_array($atts['mode'], array('live', 'button'), true) ? $atts['mode'] : 'live';
 
       // Styles
       wp_register_style('roi-calculator-inline-style', false, array(), '1.0.2');
@@ -45,7 +49,7 @@ if (!class_exists('ROI_Calculator_Module')) {
 
       // Markup
       ob_start(); ?>
-      <section id="roi-calculator" class="roi-wrap" data-roi-init="0">
+      <section id="roi-calculator" class="roi-wrap" data-roi-init="0" data-roi-mode="<?php echo esc_attr($mode); ?>">
         <div class="roi-grid">
           <div class="roi-left">
             <h2 class="roi-title">
@@ -297,9 +301,15 @@ CSS;
   var initialized = false;
   var debounceTimer = null;
   var lastInputHash = null;
+  var calculationMode = 'live'; // 'live' or 'button' - read from data attribute
 
   function el(id) {
     return document.getElementById(id);
+  }
+  
+  // Check if live calculation is enabled
+  function isLiveMode() {
+    return calculationMode === 'live';
   }
 
   // Clamp utility to keep value within bounds
@@ -368,6 +378,10 @@ CSS;
     container = document.getElementById('roi-calculator');
     if (!container || initialized) return;
     container.setAttribute('data-roi-init', '1');
+    
+    // Read calculation mode from data attribute ('live' or 'button')
+    calculationMode = container.getAttribute('data-roi-mode') || 'live';
+    
     bindEvents();
     initialized = true;
   }
@@ -988,23 +1002,27 @@ CSS;
       });
     }
     
-    // Live calculation on input change (debounced)
+    // Live calculation on input change (debounced) - only in 'live' mode
     container.addEventListener('input', function(e) {
       if (e.target && e.target.classList.contains('roi-input')) {
         e.target.classList.remove('roi-input--error');
-        debouncedLiveCalculate();
+        if (isLiveMode()) {
+          debouncedLiveCalculate();
+        }
       }
     });
     
-    // Also trigger on select change
+    // Also trigger on select change - only in 'live' mode
     container.addEventListener('change', function(e) {
       if (e.target && e.target.classList.contains('roi-select')) {
         handleFieldValidation(e.target.id);
-        debouncedLiveCalculate();
+        if (isLiveMode()) {
+          debouncedLiveCalculate();
+        }
       }
     });
     
-    // Live validation on blur
+    // Live validation on blur (always active for UX)
     container.addEventListener('blur', function(e) {
       if (e.target && e.target.classList.contains('roi-input')) {
         handleFieldValidation(e.target.id);
