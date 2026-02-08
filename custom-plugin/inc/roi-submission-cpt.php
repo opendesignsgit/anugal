@@ -17,6 +17,11 @@ if (!class_exists('ROI_Submission_CPT')) {
     const OPTION_ADMIN_EMAIL = 'roi_calculator_admin_email';
     const NONCE_ACTION = 'roi_submission_nonce';
     
+    // Admin Email Frequency Options
+    const OPTION_ADMIN_EMAIL_FREQUENCY = 'roi_admin_email_frequency';
+    const FREQ_FIRST_ONLY = 'first';
+    const FREQ_EVERY_CALC = 'every';
+    
     // SMTP Configuration Options
     const OPTION_SMTP_ENABLED = 'roi_smtp_enabled';
     const OPTION_SMTP_HOST = 'roi_smtp_host';
@@ -35,6 +40,8 @@ if (!class_exists('ROI_Submission_CPT')) {
       add_action('admin_init', array($this, 'register_settings'));
       add_action('wp_ajax_roi_submit_calculation', array($this, 'handle_submission'));
       add_action('wp_ajax_nopriv_roi_submit_calculation', array($this, 'handle_submission'));
+      add_action('wp_ajax_roi_download_report', array($this, 'handle_download_report'));
+      add_action('wp_ajax_nopriv_roi_download_report', array($this, 'handle_download_report'));
       
       // Configure PHPMailer to use SMTP if enabled
       add_action('phpmailer_init', array($this, 'configure_smtp'));
@@ -101,6 +108,15 @@ if (!class_exists('ROI_Submission_CPT')) {
         'normal',
         'default'
       );
+      
+      add_meta_box(
+        'roi_calculation_history',
+        'Calculation History',
+        array($this, 'render_history_meta_box'),
+        self::POST_TYPE,
+        'normal',
+        'low'
+      );
     }
 
     /**
@@ -149,6 +165,61 @@ if (!class_exists('ROI_Submission_CPT')) {
       </table>
       <?php
     }
+    
+    /**
+     * Render the calculation history meta box
+     */
+    public function render_history_meta_box($post) {
+      $history = get_post_meta($post->ID, '_roi_calculation_history', true);
+      $count = get_post_meta($post->ID, '_roi_calculation_count', true);
+      
+      if (!is_array($history) || empty($history)) {
+        echo '<p>No calculation history available.</p>';
+        return;
+      }
+      ?>
+      <p><strong>Total calculations:</strong> <?php echo esc_html($count ?: count($history)); ?></p>
+      <style>
+        .roi-history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .roi-history-table th, .roi-history-table td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
+        .roi-history-table th { background: #f9f9f9; font-weight: 600; }
+        .roi-history-item { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; }
+        .roi-history-header { background: #f5f5f5; padding: 10px; font-weight: 600; cursor: pointer; }
+        .roi-history-content { padding: 10px; display: none; }
+        .roi-history-item.open .roi-history-content { display: block; }
+      </style>
+      <div class="roi-history-list">
+        <?php 
+        $history = array_reverse($history); // Show newest first
+        foreach ($history as $index => $calc): 
+          $timestamp = $calc['timestamp'] ?? '';
+          $data = $calc['data'] ?? array();
+          $results = $calc['results'] ?? array();
+        ?>
+        <div class="roi-history-item">
+          <div class="roi-history-header" onclick="this.parentElement.classList.toggle('open')">
+            #<?php echo esc_html(count($history) - $index); ?> - <?php echo esc_html($timestamp); ?>
+            (ROI Year 1: <?php echo esc_html(number_format((float)($results['roi_year1'] ?? 0), 1)); ?>%)
+          </div>
+          <div class="roi-history-content">
+            <table class="roi-history-table">
+              <tr><th colspan="2">Inputs</th></tr>
+              <tr><td>Employees</td><td><?php echo esc_html($data['employees'] ?? ''); ?></td></tr>
+              <tr><td>Applications</td><td><?php echo esc_html($data['apps'] ?? ''); ?></td></tr>
+              <tr><td>AM%</td><td><?php echo esc_html($data['am_percent'] ?? ''); ?>%</td></tr>
+              <tr><td>CLI%</td><td><?php echo esc_html($data['cli_percent'] ?? ''); ?>%</td></tr>
+              <tr><th colspan="2">Results</th></tr>
+              <tr><td>Hours Saved</td><td><?php echo esc_html(number_format((float)($results['hours_saved'] ?? 0), 0)); ?></td></tr>
+              <tr><td>Annual Savings</td><td>€<?php echo esc_html(number_format((float)($results['annual_savings_eur'] ?? 0), 0)); ?></td></tr>
+              <tr><td>Year 1 ROI</td><td><?php echo esc_html(number_format((float)($results['roi_year1'] ?? 0), 1)); ?>%</td></tr>
+              <tr><td>3-Year ROI</td><td><?php echo esc_html(number_format((float)($results['roi_3year'] ?? 0), 1)); ?>%</td></tr>
+            </table>
+          </div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <?php
+    }
 
     /**
      * Add settings page under the CPT menu
@@ -173,6 +244,13 @@ if (!class_exists('ROI_Submission_CPT')) {
         'type' => 'string',
         'sanitize_callback' => 'sanitize_email',
         'default' => get_option('admin_email'),
+      ));
+      
+      // Admin email frequency setting
+      register_setting('roi_calculator_settings', self::OPTION_ADMIN_EMAIL_FREQUENCY, array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_text_field',
+        'default' => self::FREQ_FIRST_ONLY,
       ));
       
       // SMTP settings
@@ -253,6 +331,17 @@ if (!class_exists('ROI_Submission_CPT')) {
                        value="<?php echo esc_attr(get_option(self::OPTION_ADMIN_EMAIL, get_option('admin_email'))); ?>" 
                        class="regular-text">
                 <p class="description">Email address to receive ROI calculation submissions. Defaults to the WordPress admin email.</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL_FREQUENCY); ?>">Admin Email Frequency</label></th>
+              <td>
+                <?php $freq = get_option(self::OPTION_ADMIN_EMAIL_FREQUENCY, self::FREQ_FIRST_ONLY); ?>
+                <select id="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL_FREQUENCY); ?>" name="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL_FREQUENCY); ?>">
+                  <option value="<?php echo esc_attr(self::FREQ_FIRST_ONLY); ?>" <?php selected($freq, self::FREQ_FIRST_ONLY); ?>>First submission only</option>
+                  <option value="<?php echo esc_attr(self::FREQ_EVERY_CALC); ?>" <?php selected($freq, self::FREQ_EVERY_CALC); ?>>Every calculation</option>
+                </select>
+                <p class="description">When to send emails to admin. "First submission only" sends email once per unique user email.</p>
               </td>
             </tr>
           </table>
@@ -432,19 +521,32 @@ if (!class_exists('ROI_Submission_CPT')) {
         return;
       }
 
-      // Create post
-      $post_id = wp_insert_post(array(
-        'post_type'   => self::POST_TYPE,
-        'post_status' => 'publish',
-        'post_title'  => sprintf('%s - %s (%s)', $data['company'], $data['name'], wp_date('Y-m-d H:i')),
-      ));
+      // Check for existing submission by email (deduplication)
+      $existing_post = $this->find_submission_by_email($data['email']);
+      $is_new_submission = empty($existing_post);
+      
+      if ($existing_post) {
+        // Update existing post
+        $post_id = $existing_post->ID;
+        wp_update_post(array(
+          'ID'         => $post_id,
+          'post_title' => sprintf('%s - %s (updated %s)', $data['company'], $data['name'], wp_date('Y-m-d H:i')),
+        ));
+      } else {
+        // Create new post
+        $post_id = wp_insert_post(array(
+          'post_type'   => self::POST_TYPE,
+          'post_status' => 'publish',
+          'post_title'  => sprintf('%s - %s (%s)', $data['company'], $data['name'], wp_date('Y-m-d H:i')),
+        ));
+      }
 
       if (is_wp_error($post_id)) {
         wp_send_json_error(array('message' => 'Failed to save submission'));
         return;
       }
 
-      // Save meta data
+      // Save meta data (always update with latest values)
       update_post_meta($post_id, '_roi_name', $data['name']);
       update_post_meta($post_id, '_roi_phone', $data['phone']);
       update_post_meta($post_id, '_roi_email', $data['email']);
@@ -466,15 +568,152 @@ if (!class_exists('ROI_Submission_CPT')) {
       update_post_meta($post_id, '_roi_year1', $results['roi_year1']);
       update_post_meta($post_id, '_roi_3year', $results['roi_3year']);
       update_post_meta($post_id, '_roi_payback', $results['payback']);
+      
+      // Track calculation history
+      $history = get_post_meta($post_id, '_roi_calculation_history', true);
+      if (!is_array($history)) {
+        $history = array();
+      }
+      $history[] = array(
+        'timestamp' => current_time('mysql'),
+        'data'      => $data,
+        'results'   => $results,
+      );
+      update_post_meta($post_id, '_roi_calculation_history', $history);
+      update_post_meta($post_id, '_roi_calculation_count', count($history));
 
-      // Send emails
-      $this->send_user_email($data, $results);
-      $this->send_admin_email($data, $results);
+      // Send emails based on settings
+      $admin_freq = get_option(self::OPTION_ADMIN_EMAIL_FREQUENCY, self::FREQ_FIRST_ONLY);
+      $should_send_admin_email = ($admin_freq === self::FREQ_EVERY_CALC) || $is_new_submission;
+      
+      // User always gets email on download report (handled separately), not on every calculation
+      // Admin email based on frequency setting
+      if ($should_send_admin_email) {
+        $this->send_admin_email($data, $results);
+      }
 
       wp_send_json_success(array(
-        'message' => 'Submission saved and emails sent',
-        'post_id' => $post_id,
+        'message'        => $is_new_submission ? 'Submission saved' : 'Calculation updated',
+        'post_id'        => $post_id,
+        'is_new'         => $is_new_submission,
+        'calc_count'     => count($history),
       ));
+    }
+    
+    /**
+     * Find existing submission by email
+     */
+    private function find_submission_by_email($email) {
+      $query = new WP_Query(array(
+        'post_type'      => self::POST_TYPE,
+        'post_status'    => 'publish',
+        'posts_per_page' => 1,
+        'meta_query'     => array(
+          array(
+            'key'   => '_roi_email',
+            'value' => $email,
+          ),
+        ),
+      ));
+      
+      if ($query->have_posts()) {
+        return $query->posts[0];
+      }
+      
+      return null;
+    }
+    
+    /**
+     * Handle download report AJAX
+     */
+    public function handle_download_report() {
+      // Verify nonce
+      if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), self::NONCE_ACTION)) {
+        wp_send_json_error(array('message' => 'Security check failed'));
+        return;
+      }
+
+      // Sanitize input data
+      $data = array(
+        'name'           => isset($_POST['name']) ? sanitize_text_field(wp_unslash($_POST['name'])) : '',
+        'phone'          => isset($_POST['phone']) ? sanitize_text_field(wp_unslash($_POST['phone'])) : '',
+        'email'          => isset($_POST['email']) ? sanitize_email(wp_unslash($_POST['email'])) : '',
+        'company'        => isset($_POST['company']) ? sanitize_text_field(wp_unslash($_POST['company'])) : '',
+        'region'         => isset($_POST['region']) ? sanitize_text_field(wp_unslash($_POST['region'])) : '',
+        'employees'      => isset($_POST['employees']) ? absint($_POST['employees']) : 0,
+        'apps'           => isset($_POST['apps']) ? absint($_POST['apps']) : 0,
+        'am_percent'     => isset($_POST['am_percent']) ? floatval($_POST['am_percent']) : 0,
+        'cli_percent'    => isset($_POST['cli_percent']) ? floatval($_POST['cli_percent']) : 0,
+        'review_cycles'  => isset($_POST['review_cycles']) ? absint($_POST['review_cycles']) : 0,
+        'days_per_review'=> isset($_POST['days_per_review']) ? absint($_POST['days_per_review']) : 0,
+        'daily_tickets'  => isset($_POST['daily_tickets']) ? absint($_POST['daily_tickets']) : 0,
+      );
+
+      $results = array(
+        'hours_saved'        => isset($_POST['hours_saved']) ? floatval($_POST['hours_saved']) : 0,
+        'annual_savings_eur' => isset($_POST['annual_savings_eur']) ? floatval($_POST['annual_savings_eur']) : 0,
+        'subscription_eur'   => isset($_POST['subscription_eur']) ? floatval($_POST['subscription_eur']) : 0,
+        'implementation_eur' => isset($_POST['implementation_eur']) ? floatval($_POST['implementation_eur']) : 0,
+        'roi_year1'          => isset($_POST['roi_year1']) ? floatval($_POST['roi_year1']) : 0,
+        'roi_3year'          => isset($_POST['roi_3year']) ? floatval($_POST['roi_3year']) : 0,
+        'payback'            => isset($_POST['payback']) ? sanitize_text_field(wp_unslash($_POST['payback'])) : 'N/A',
+      );
+
+      // Send email to user
+      $this->send_user_email($data, $results);
+      
+      // Build CSV content
+      $csv = $this->build_csv_report($data, $results);
+
+      wp_send_json_success(array(
+        'message'  => 'Report sent to your email',
+        'csv'      => $csv,
+        'filename' => sprintf('anugal-roi-report-%s.csv', sanitize_file_name($data['company'])),
+      ));
+    }
+    
+    /**
+     * Build CSV report content
+     */
+    private function build_csv_report($data, $results) {
+      $lines = array();
+      
+      // Header
+      $lines[] = 'Anugal ROI Calculator Report';
+      $lines[] = 'Generated: ' . wp_date('Y-m-d H:i:s');
+      $lines[] = '';
+      
+      // Contact Info
+      $lines[] = 'Contact Information';
+      $lines[] = 'Name,' . $data['name'];
+      $lines[] = 'Email,' . $data['email'];
+      $lines[] = 'Phone,' . $data['phone'];
+      $lines[] = 'Company,' . $data['company'];
+      $lines[] = 'Region,' . $data['region'];
+      $lines[] = '';
+      
+      // Input Parameters
+      $lines[] = 'Input Parameters';
+      $lines[] = 'Total Employees,' . $data['employees'];
+      $lines[] = 'Applications to Govern,' . $data['apps'];
+      $lines[] = 'AM Percentage,' . $data['am_percent'] . '%';
+      $lines[] = 'CLI Percentage,' . $data['cli_percent'] . '%';
+      $lines[] = 'Review Cycles/Year,' . $data['review_cycles'];
+      $lines[] = 'Days per Review,' . $data['days_per_review'];
+      $lines[] = 'Daily Access Tickets,' . $data['daily_tickets'];
+      $lines[] = '';
+      
+      // Results
+      $lines[] = 'Calculation Results';
+      $lines[] = 'Hours Saved (Annual),' . number_format($results['hours_saved'], 0);
+      $lines[] = 'Annual Savings (EUR),' . number_format($results['annual_savings_eur'], 0);
+      $lines[] = 'Annual Subscription (EUR),' . number_format($results['subscription_eur'], 0);
+      $lines[] = 'Implementation Cost (EUR),' . number_format($results['implementation_eur'], 0);
+      $lines[] = 'Year 1 ROI,' . number_format($results['roi_year1'], 1) . '%';
+      $lines[] = '3-Year ROI,' . number_format($results['roi_3year'], 1) . '%';
+      $lines[] = 'Payback Period,' . $results['payback'];
+      
+      return implode("\n", $lines);
     }
 
     /**

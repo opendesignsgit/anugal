@@ -202,6 +202,14 @@ if (!class_exists('ROI_Calculator_Module')) {
                 <div class="roi-card__sublabel" id="roi-payback-note"></div>
               </div>
             </div>
+            
+            <div class="roi-download-wrap" id="roi-download-wrap" style="display:none;">
+              <button type="button" class="roi-btn roi-btn--download" id="roi-download-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Report
+              </button>
+              <div class="roi-download-note">Report will be sent to your email and downloaded</div>
+            </div>
           </div>
         </div>
       </section>
@@ -254,6 +262,10 @@ if (!class_exists('ROI_Calculator_Module')) {
 .roi-card__status--excellent{background:rgba(16,185,129,0.3);color:#6EE7B7}
 .roi-field-error{color:#E53935;font-size:11px;margin-top:4px;display:none}
 .roi-field{position:relative}
+.roi-download-wrap{margin-top:20px;text-align:center;padding:0 24px 8px}
+.roi-btn--download{background:rgba(255,255,255,0.15);color:#fff;border:2px solid rgba(255,255,255,0.3);width:100%;display:flex;align-items:center;justify-content:center}
+.roi-btn--download:hover{background:rgba(255,255,255,0.25);border-color:rgba(255,255,255,0.5)}
+.roi-download-note{font-size:11px;opacity:0.7;margin-top:8px}
 CSS;
     }
 
@@ -796,6 +808,12 @@ CSS;
       el('roi-payback-value').innerText = 'N/A';
       el('roi-payback-note').innerText = 'Savings do not cover annual costs';
     }
+    
+    // Show download button
+    var downloadWrap = el('roi-download-wrap');
+    if (downloadWrap) {
+      downloadWrap.style.display = 'block';
+    }
   }
 
   function showErrors(errors) {
@@ -922,6 +940,97 @@ CSS;
       warningsEl.innerHTML = '<span style="color:#059669">✓ ' + message + '</span>';
     }
   }
+  
+  function handleDownloadReport() {
+    if (typeof roiCalculatorAjax === 'undefined') {
+      console.warn('AJAX not available for download');
+      return;
+    }
+    
+    var inputs = getInputs();
+    var errors = validateInputs(inputs);
+    
+    if (errors.length > 0) {
+      showErrors(errors);
+      highlightErrors(errors);
+      return;
+    }
+    
+    var result = calculate(inputs);
+    var safeResult = safeOutput(result);
+    var paybackValue = el('roi-payback-value');
+    
+    var formData = new FormData();
+    formData.append('action', 'roi_download_report');
+    formData.append('nonce', roiCalculatorAjax.nonce);
+    
+    // Contact fields
+    formData.append('name', inputs.name);
+    formData.append('phone', inputs.phone);
+    formData.append('email', inputs.email);
+    formData.append('company', inputs.company);
+    formData.append('region', inputs.region);
+    
+    // Input parameters
+    formData.append('employees', inputs.employee_count);
+    formData.append('apps', inputs.connected_apps);
+    formData.append('am_percent', inputs.am_percent * 100);
+    formData.append('cli_percent', inputs.cli_percent * 100);
+    formData.append('review_cycles', inputs.review_cycles_per_year);
+    formData.append('days_per_review', inputs.days_per_review);
+    formData.append('daily_tickets', inputs.daily_access_tickets);
+    
+    // Calculation results
+    formData.append('hours_saved', safeResult.hours_saved_annual);
+    formData.append('annual_savings_eur', safeResult.annual_savings_eur);
+    formData.append('subscription_eur', safeResult.annual_subscription_eur);
+    formData.append('implementation_eur', safeResult.implementation_cost_eur);
+    formData.append('roi_year1', safeResult.roi_year1);
+    formData.append('roi_3year', safeResult.roi_3y);
+    formData.append('payback', paybackValue ? paybackValue.innerText : 'N/A');
+    
+    var downloadBtn = el('roi-download-btn');
+    if (downloadBtn) {
+      downloadBtn.disabled = true;
+      downloadBtn.innerHTML = 'Sending...';
+    }
+    
+    fetch(roiCalculatorAjax.ajaxurl, {
+      method: 'POST',
+      body: formData
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      if (downloadBtn) {
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Report';
+      }
+      
+      if (data.success) {
+        showSuccessMessage(data.data.message);
+        
+        // Trigger CSV download
+        var blob = new Blob([data.data.csv], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = data.data.filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        showErrors([{ message: data.data.message || 'Download failed' }]);
+      }
+    })
+    .catch(function(error) {
+      if (downloadBtn) {
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Report';
+      }
+      console.error('Download error:', error);
+      showErrors([{ message: 'Network error during download' }]);
+    });
+  }
 
   function handleCalculate() {
     var inputs = getInputs();
@@ -987,6 +1096,7 @@ CSS;
   function bindEvents() {
     var calcBtn = el('roi-calc-btn');
     var arrowBtn = el('roi-calc-arrow');
+    var downloadBtn = el('roi-download-btn');
     
     if (calcBtn) {
       calcBtn.addEventListener('click', function(e) {
@@ -999,6 +1109,13 @@ CSS;
       arrowBtn.addEventListener('click', function(e) {
         e.preventDefault();
         handleCalculate();
+      });
+    }
+    
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        handleDownloadReport();
       });
     }
     
