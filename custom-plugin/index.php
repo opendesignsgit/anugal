@@ -138,6 +138,7 @@ include(plugin_dir_path(__FILE__) . '/inc/core-integrations.php');
 /** Help Center **/
 
 include(plugin_dir_path(__FILE__) . '/inc/help-center.php');
+include(plugin_dir_path(__FILE__) . '/inc/help-center-single.php');
 
 /** Help Center **/
 
