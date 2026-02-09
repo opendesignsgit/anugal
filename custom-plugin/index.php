@@ -125,6 +125,7 @@ include(plugin_dir_path(__FILE__) . '/inc/recent-blogs.php');
 /** ROI Calculator **/
 
 include(plugin_dir_path(__FILE__) . '/inc/roi-calculator.php');
+include(plugin_dir_path(__FILE__) . '/inc/roi-submission-cpt.php');
 
 /** ROI Calculator **/
 

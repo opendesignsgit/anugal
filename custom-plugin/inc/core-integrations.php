@@ -460,11 +460,11 @@ CSS;
 
     function renderCard(post){
         var iconHtml = post.icon ? '<img src="'+escHtml(post.icon)+'" alt="">' : '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3E54E8" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
-        return '<a href="'+escHtml(post.link)+'" class="ci-card">' +
+        return '<div class="ci-card">' +
             '<div class="ci-card__icon">'+iconHtml+'</div>' +
             '<h3 class="ci-card__title">'+escHtml(post.title)+'</h3>' +
             '<p class="ci-card__desc">'+escHtml(post.excerpt)+'</p>' +
-        '</a>';
+        '</div>';
     }
 
     function escHtml(str){
