@@ -149,7 +149,7 @@ class Post_Single_Shortcodes {
                        rel="noopener noreferrer"
                        title="Share on <?php echo esc_attr($data['label']); ?>"
                        aria-label="Share on <?php echo esc_attr($data['label']); ?>">
-                        <?php echo $data['icon']; ?>
+                        <?php echo wp_kses_post($data['icon']); ?>
                     </a>
                 <?php endforeach; ?>
             </div>
@@ -175,7 +175,7 @@ class Post_Single_Shortcodes {
         
         // If no bio is set, provide a default
         if (empty($author_bio)) {
-            $author_bio = 'This author has not provided a bio yet.';
+            $author_bio = __('This author has not provided a bio yet.', 'custom');
         }
 
         ob_start();
@@ -202,7 +202,6 @@ class Post_Single_Shortcodes {
 .pss-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 .pss-toc--sticky{position:sticky;top:100px}
 .pss-toc__title{font-size:14px;font-weight:700;letter-spacing:1px;color:#111;margin:0 0 16px;padding-bottom:16px;border-bottom:1px solid #E8E8E8;text-transform:uppercase}
-.pss-toc__nav{}
 .pss-toc__list{list-style:none;margin:0;padding:0}
 .pss-toc__item{margin:0;padding:0}
 .pss-toc__item--indent{padding-left:16px}
@@ -223,7 +222,6 @@ class Post_Single_Shortcodes {
 /* Post Single - Author */
 .pss-author{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin-top:40px}
 .pss-author__title{font-size:14px;font-weight:700;letter-spacing:1px;color:#111;margin:0 0 16px;padding-bottom:16px;border-bottom:1px solid #E8E8E8;text-transform:uppercase}
-.pss-author__content{}
 .pss-author__bio{font-size:14px;line-height:1.7;color:#666;margin:0}
 
 /* Responsive */
