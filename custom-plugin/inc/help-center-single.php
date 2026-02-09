@@ -136,7 +136,7 @@ class Help_Center_Single_Shortcodes {
         $current_time = current_time('timestamp');
         
         $diff = $current_time - $modified_date;
-        $days = floor($diff / (60 * 60 * 24));
+        $days = floor($diff / DAY_IN_SECONDS);
         
         if ($days === 0) {
             $time_text = 'Updated today';
@@ -146,11 +146,11 @@ class Help_Center_Single_Shortcodes {
             $time_text = sprintf('Updated %d days ago', $days);
         } elseif ($days < 60) {
             $time_text = 'Updated 1 month ago';
-        } elseif ($days < 365) {
-            $months = floor($days / 30);
+        } elseif ($diff < YEAR_IN_SECONDS) {
+            $months = floor($diff / MONTH_IN_SECONDS);
             $time_text = sprintf('Updated %d months ago', $months);
         } else {
-            $years = floor($days / 365);
+            $years = floor($diff / YEAR_IN_SECONDS);
             $time_text = $years === 1 ? 'Updated 1 year ago' : sprintf('Updated %d years ago', $years);
         }
 
@@ -297,7 +297,6 @@ class Help_Center_Single_Shortcodes {
             <nav class="hcs-toc__nav">
                 <ul class="hcs-toc__list">
                     <?php 
-                    $index = 0;
                     foreach ($matches as $match): 
                         $tag = strtolower($match[1]);
                         $text = strip_tags($match[2]);
@@ -310,7 +309,6 @@ class Help_Center_Single_Shortcodes {
                             </a>
                         </li>
                     <?php 
-                        $index++;
                     endforeach; 
                     ?>
                 </ul>
@@ -502,7 +500,7 @@ CSS;
     }
 
     // Re-initialize for Elementor editor preview
-    if (typeof elementorFrontend !== 'undefined') {
+    if (typeof elementorFrontend !== 'undefined' && typeof jQuery !== 'undefined') {
         jQuery(window).on('elementor/frontend/init', function() {
             elementorFrontend.hooks.addAction('frontend/element_ready/global', function() {
                 initAccordion();
