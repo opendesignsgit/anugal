@@ -201,14 +201,16 @@ if (!class_exists('ROI_Calculator_Module')) {
                 <div class="roi-card__label">Payback Period</div>
                 <div class="roi-card__sublabel" id="roi-payback-note"></div>
               </div>
-            </div>
-            
-            <div class="roi-download-wrap" id="roi-download-wrap" style="display:none;">
-              <button type="button" class="roi-btn roi-btn--download" id="roi-download-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download Report
-              </button>
-              <div class="roi-download-note">Report will be sent to your email and downloaded</div>
+
+              <div class="roi-card__divider"></div>
+              
+              <div class="roi-download-wrap" id="roi-download-wrap" style="display:none;">
+                <button type="button" class="roi-btn roi-btn--download" id="roi-download-btn">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download Report
+                </button>
+                <div class="roi-download-note">Report will be sent to your email and downloaded</div>
+              </div>
             </div>
           </div>
         </div>
@@ -262,7 +264,7 @@ if (!class_exists('ROI_Calculator_Module')) {
 .roi-card__status--excellent{background:rgba(16,185,129,0.3);color:#6EE7B7}
 .roi-field-error{color:#E53935;font-size:11px;margin-top:4px;display:none}
 .roi-field{position:relative}
-.roi-download-wrap{margin-top:20px;text-align:center;padding:0 24px 8px}
+.roi-download-wrap{margin-top:0;text-align:center;padding:16px 0 8px}
 .roi-btn--download{background:rgba(255,255,255,0.15);color:#fff;border:2px solid rgba(255,255,255,0.3);width:100%;display:flex;align-items:center;justify-content:center}
 .roi-btn--download:hover{background:rgba(255,255,255,0.25);border-color:rgba(255,255,255,0.5)}
 .roi-download-note{font-size:11px;opacity:0.7;margin-top:8px}
