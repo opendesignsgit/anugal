@@ -128,6 +128,12 @@ include(plugin_dir_path(__FILE__) . '/inc/post-single.php');
 
 /** Post Single **/
 
+/** Related Posts **/
+
+include(plugin_dir_path(__FILE__) . '/inc/related-posts.php');
+
+/** Related Posts **/
+
 /** ROI Calculator **/
 
 include(plugin_dir_path(__FILE__) . '/inc/roi-calculator.php');
