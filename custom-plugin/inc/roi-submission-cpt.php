@@ -381,7 +381,7 @@ if (!class_exists('ROI_Submission_CPT')) {
                   <option value="<?php echo esc_attr(self::FREQ_FIRST_ONLY); ?>" <?php selected($cust_freq, self::FREQ_FIRST_ONLY); ?>>First submission only</option>
                   <option value="<?php echo esc_attr(self::FREQ_EVERY_CALC); ?>" <?php selected($cust_freq, self::FREQ_EVERY_CALC); ?>>Every calculation</option>
                 </select>
-                <p class="description">When to send emails to the customer. "First submission only" sends email once per unique user email. "Every calculation" sends on each ROI calculation.</p>
+                <p class="description">When to send emails to the customer. "First submission only" sends email once per unique user email.</p>
               </td>
             </tr>
           </table>
