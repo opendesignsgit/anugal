@@ -136,21 +136,25 @@ function render_allposts_shortcode($atts = array()) {
     </style>
 
     <section class="ap-section">
-        <!-- Row 1: big + 2 small side-by-side -->
-        <div class="ap-row-top">
+        <!-- Row 1: big + 2 small -->
+        <div class="ap-row">
             <div class="ap-col-big">
                 <?php allposts_render_card($cards[0], 'big'); ?>
             </div>
-            <?php allposts_render_card($cards[1], 'small'); ?>
-            <?php allposts_render_card($cards[2], 'small'); ?>
+            <div class="ap-col-right">
+                <div class="ap-row-top">
+                    <?php allposts_render_card($cards[1], 'regular'); ?>
+                    <?php allposts_render_card($cards[2], 'regular'); ?>
+                </div>
+                <!-- Row 2: 3 regular -->
+                <div class="ap-row-bottom">
+                    <?php allposts_render_card($cards[3], 'regular'); ?>
+                    <?php allposts_render_card($cards[4], 'regular'); ?>
+                    <?php allposts_render_card($cards[5], 'regular'); ?>
+                </div>
+            </div>
         </div>
 
-        <!-- Row 2: 3 regular -->
-        <div class="ap-row-bottom">
-            <?php allposts_render_card($cards[3], 'regular'); ?>
-            <?php allposts_render_card($cards[4], 'regular'); ?>
-            <?php allposts_render_card($cards[5], 'regular'); ?>
-        </div>
     </section>
     <?php
     return ob_get_clean();

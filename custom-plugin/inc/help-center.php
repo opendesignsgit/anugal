@@ -120,28 +120,24 @@ if (!class_exists('Help_Center_Module')) {
 
             ob_start(); ?>
             <section id="help-center-module" class="hc-wrap" data-hc-init="0">
-                <div class="hc-header">
-                    <div class="hc-header__tools">
-                        <div class="hc-searchbar">
-                            <div class="hc-input-wrap">
-                                <svg class="hc-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <path d="m21 21-4.35-4.35"></path>
-                                </svg>
-                                <input type="text" id="hc-search-input" class="hc-searchbar__input" placeholder="Search by Keyword" aria-label="Search by Keyword">
-                                <button id="hc-clear-btn" class="hc-clear-btn" type="button" title="Clear search" aria-label="Clear search">×</button>
+                <div class="hc-header postlistHead jcenterhead">
+                    <div class="hc-header__tools plhTools">
+                        <div class="hc-searchbar plhSearchbar">
+                            <div class="plhinSearwrap">
+								<svg class="hc-search-icon plhsearchicon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<circle cx="11" cy="11" r="8"></circle>
+									<path d="m21 21-4.35-4.35"></path>
+								</svg>
+								<div class="hc-input-wrap plhinputwrap">
+									<input type="text" id="hc-search-input" class="plhsearchbar__input" placeholder="Search by Keyword" aria-label="Search by Keyword">
+									<button id="hc-clear-btn" class="hc-clear-btn plhclearbtn" type="button" title="Clear search" aria-label="Clear search">×</button>
+								</div>
+								<button id="hc-search-btn" class="hc-searchbar__btn plhSearchbarbtn" type="button">SEARCH</button>
                             </div>
-                            <button id="hc-search-btn" class="hc-searchbar__btn" type="button">SEARCH</button>
-                            <button id="hc-sort-toggle" class="hc-searchbar__filter" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="hc-sort-menu" title="Sort">
-                                <span class="hc-filter__icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="4" y1="6" x2="20" y2="6"></line>
-                                        <line x1="4" y1="12" x2="16" y2="12"></line>
-                                        <line x1="4" y1="18" x2="12" y2="18"></line>
-                                    </svg>
-                                </span>
+                            <button id="hc-sort-toggle" class="hc-searchbar__filter plhfilterbtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="hc-sort-menu" title="Sort">
+                               <img src="https://dev.opendesignsin.com/anugal-wp/wp-content/uploads/2026/02/FunnelSimple.png" alt=""/>
                             </button>
-                            <div id="hc-sort-menu" class="hc-sort-menu" role="menu" aria-hidden="true">
+                            <div id="hc-sort-menu" class="hc-sort-menu plhsortmenu" role="menu" aria-hidden="true">
                                 <button class="hc-sort-menu__item" data-orderby="date" data-order="desc" role="menuitem" type="button">Newest</button>
                                 <button class="hc-sort-menu__item" data-orderby="date" data-order="asc" role="menuitem" type="button">Oldest</button>
                                 <button class="hc-sort-menu__item" data-orderby="title" data-order="asc" role="menuitem" type="button">Title A–Z</button>
@@ -153,10 +149,10 @@ if (!class_exists('Help_Center_Module')) {
 
                 <section id="hc-grid" class="hc-grid" aria-live="polite"></section>
 
-                <div class="hc-loadmore-wrap">
-                    <button id="hc-loadmore" class="hc-loadmore" disabled type="button">
+                <div class="hc-loadmore-wrap loadmore-wrap">
+                    <button id="hc-loadmore" class="hc-loadmore loadmore" disabled type="button">
                         <span>Load More</span>
-                        <span class="hc-loadmore__arrow">›</span>
+                        <span class="hc-loadmore__arrow loadmore__arrow"><img src="https://dev.opendesignsin.com/anugal-wp/wp-content/uploads/2026/01/emore-arrow-img1.png" alt=""/></span>
                     </button>
                 </div>
             </section>
@@ -240,44 +236,7 @@ if (!class_exists('Help_Center_Module')) {
 
         private function inline_css() {
             return <<<CSS
-.hc-wrap{max-width:1200px;margin:0 auto;padding:24px 16px 48px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-.hc-header{display:flex;justify-content:center;margin-bottom:32px}
-.hc-searchbar{display:flex;gap:12px;align-items:center}
-.hc-input-wrap{position:relative;display:flex;align-items:center}
-.hc-search-icon{position:absolute;left:16px;color:#999}
-.hc-searchbar__input{border:1px solid #E0E0E0;border-radius:999px;padding:14px 40px 14px 48px;font-size:14px;outline:none;min-width:400px;background:#fff}
-.hc-searchbar__input:focus{border-color:#3E54E8}
-@media (max-width:640px){.hc-searchbar__input{min-width:240px}}
-.hc-clear-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:999px;border:none;background:#E0E0E0;color:#666;display:none;cursor:pointer;font-size:16px;line-height:22px;text-align:center}
-.hc-clear-btn:hover{background:#ccc}
-.hc-searchbar__btn{background:#3E54E8;color:#fff;border:none;border-radius:10px;font-weight:600;padding:14px 24px;cursor:pointer;font-size:14px}
-.hc-searchbar__btn:hover{background:#2d43d6}
-.hc-searchbar__filter{background:#fff;border:1px solid #E0E0E0;border-radius:10px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.hc-searchbar__filter:hover{background:#f5f5f5}
-.hc-filter__icon{display:flex;color:#666}
-.hc-sort-menu{position:absolute;margin-top:8px;right:16px;background:#fff;border:1px solid #E0E0E0;box-shadow:0 6px 20px rgba(0,0,0,.08);border-radius:12px;display:none;min-width:180px;z-index:100;overflow:hidden}
-.hc-sort-menu[aria-hidden="false"]{display:block}
-.hc-sort-menu__item{display:block;width:100%;text-align:left;padding:12px 16px;border:none;background:#fff;cursor:pointer;font-size:14px}
-.hc-sort-menu__item:hover{background:#F7F7F7}
-.hc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-@media (max-width:1024px){.hc-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:640px){.hc-grid{grid-template-columns:1fr}}
-.hc-card{background:#fff;border-radius:16px;border:1px solid #EEE;box-shadow:0 4px 12px rgba(0,0,0,.04);overflow:hidden;padding:28px;transition:box-shadow .2s,transform .2s}
-.hc-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
-.hc-card__icon{width:48px;height:48px;margin-bottom:20px;background:#EEF2FF;border-radius:12px;display:flex;align-items:center;justify-content:center}
-.hc-card__icon svg{color:#3E54E8}
-.hc-card__title{font-size:18px;font-weight:700;margin:0 0 16px;color:#111;position:relative;padding-bottom:16px}
-.hc-card__title::after{content:'';position:absolute;bottom:0;left:0;width:60px;height:2px;background:#3E54E8}
-.hc-card__desc{font-size:14px;line-height:1.6;color:#555;margin:0 0 20px;min-height:60px}
-.hc-card__cta{font-weight:600;font-size:13px;color:#3E54E8;text-decoration:none;text-transform:uppercase;letter-spacing:.5px}
-.hc-card__cta:hover{text-decoration:underline}
-.hc-card--skeleton{height:220px;background:linear-gradient(90deg,#f2f2f2 25%,#e9e9e9 37%,#f2f2f2 63%);background-size:400% 100%;animation:hc-shine 1.2s ease infinite;border-radius:16px}
-@keyframes hc-shine{0%{background-position:0% 0}100%{background-position:100% 0}}
-.hc-loadmore-wrap{display:flex;justify-content:center;padding:40px 0}
-.hc-loadmore{display:inline-flex;align-items:center;gap:12px;background:#111827;color:#fff;border:none;border-radius:10px;padding:14px 24px;font-weight:600;cursor:pointer;font-size:14px}
-.hc-loadmore:disabled{opacity:.5;cursor:not-allowed}
-.hc-loadmore__arrow{display:inline-flex;align-items:center;justify-content:center;background:#000;color:#fff;border-radius:8px;padding:6px 12px;font-size:18px}
-.hc-empty{text-align:center;color:#777;grid-column:1 / -1;padding:48px 24px}
+
 CSS;
         }
 
