@@ -1,0 +1,20 @@
+{
+  "name": "anugal-roi-calculator",
+  "version": "1.0.0",
+  "description": "ROI Calculator for Anugal Identity Governance Platform",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"No tests configured\" && exit 0"
+  },
+  "keywords": [
+    "roi",
+    "calculator",
+    "iga",
+    "identity",
+    "governance"
+  ],
+  "author": "Anugal",
+  "license": "PROPRIETARY",
+  "devDependencies": {},
+  "dependencies": {}
+}
