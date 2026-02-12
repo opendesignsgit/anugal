@@ -173,9 +173,9 @@ if (!class_exists('ROI_Calculator_Module')) {
                 <div class="roi-card__label">Implementation Cost<br>(One-Time)</div>
                 <div class="roi-card__sublabel" id="roi-impl-alt"></div>
               </div>
-              <div class="roi-card__divider"></div>
+              <div class="roi-card__divider" id="roi-year1-divider-top"></div>
 
-              <div class="roi-card__item">
+              <div class="roi-card__item" id="roi-year1-block">
                 <div class="roi-card__value">
                   <span id="roi-year1-value">0</span>
                   <span class="roi-card__percent">%</span>
@@ -184,9 +184,9 @@ if (!class_exists('ROI_Calculator_Module')) {
                 <div class="roi-card__sublabel" id="roi-year1-net"></div>
                 <div class="roi-card__status" id="roi-year1-status"></div>
               </div>
-              <div class="roi-card__divider"></div>
+              <div class="roi-card__divider" id="roi-year1-divider-bottom"></div>
 
-              <div class="roi-card__item">
+              <div class="roi-card__item" id="roi-3year-block">
                 <div class="roi-card__value">
                   <span id="roi-3year-value">0</span>
                   <span class="roi-card__percent">%</span>
@@ -195,7 +195,7 @@ if (!class_exists('ROI_Calculator_Module')) {
                 <div class="roi-card__sublabel" id="roi-3year-net"></div>
                 <div class="roi-card__status" id="roi-3year-status"></div>
               </div>
-              <div class="roi-card__divider"></div>
+              <div class="roi-card__divider" id="roi-3year-divider-bottom"></div>
 
               <div class="roi-card__item">
                 <div class="roi-card__value roi-card__value--small">
@@ -806,11 +806,18 @@ CSS;
     }
     var status1 = getROIStatus(result.roi_year1);
     var statusEl1 = el('roi-year1-status');
+    var year1Block = el('roi-year1-block');
+    var year1DivTop = el('roi-year1-divider-top');
+    var year1DivBot = el('roi-year1-divider-bottom');
     if (!showLowRoi && result.roi_year1 < 0) {
-      statusEl1.innerText = '';
-      statusEl1.className = 'roi-card__status';
-      statusEl1.style.display = 'none';
+      // Hide the entire Year 1 ROI block and its dividers
+      if (year1Block) year1Block.style.display = 'none';
+      if (year1DivTop) year1DivTop.style.display = 'none';
+      if (year1DivBot) year1DivBot.style.display = 'none';
     } else {
+      if (year1Block) year1Block.style.display = '';
+      if (year1DivTop) year1DivTop.style.display = '';
+      if (year1DivBot) year1DivBot.style.display = '';
       statusEl1.innerText = status1.label;
       statusEl1.className = 'roi-card__status ' + status1.className;
       statusEl1.style.display = '';
@@ -827,11 +834,15 @@ CSS;
     }
     var status3 = getROIStatus(result.roi_3y);
     var statusEl3 = el('roi-3year-status');
+    var threeYearBlock = el('roi-3year-block');
+    var threeYearDivBot = el('roi-3year-divider-bottom');
     if (!showLowRoi && result.roi_3y < 0) {
-      statusEl3.innerText = '';
-      statusEl3.className = 'roi-card__status';
-      statusEl3.style.display = 'none';
+      // Hide the entire 3-Year ROI block and its divider
+      if (threeYearBlock) threeYearBlock.style.display = 'none';
+      if (threeYearDivBot) threeYearDivBot.style.display = 'none';
     } else {
+      if (threeYearBlock) threeYearBlock.style.display = '';
+      if (threeYearDivBot) threeYearDivBot.style.display = '';
       statusEl3.innerText = status3.label;
       statusEl3.className = 'roi-card__status ' + status3.className;
       statusEl3.style.display = '';

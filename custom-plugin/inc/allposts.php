@@ -101,16 +101,16 @@ function render_allposts_shortcode($atts = array()) {
     <style>
     /* ---- All Posts – dark card grid ---- */
     .ap-section{background:#0f1638;padding:48px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-    .ap-row-top{display:flex;gap:20px;margin-bottom:20px}
-    .ap-col-big{flex:0 0 48%;min-width:0}
-    .ap-col-right{flex:1;display:flex;flex-direction:column;gap:20px;min-width:0}
+    .ap-row-top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px}
+    .ap-col-big{grid-column:1/2;grid-row:1/3;min-width:0}
     .ap-row-bottom{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
     @media(max-width:1024px){
-        .ap-row-top{flex-direction:column}
-        .ap-col-big{flex:none}
+        .ap-row-top{grid-template-columns:1fr 1fr}
+        .ap-col-big{grid-column:1/-1;grid-row:auto}
         .ap-row-bottom{grid-template-columns:1fr 1fr}
     }
     @media(max-width:640px){
+        .ap-row-top{grid-template-columns:1fr}
         .ap-row-bottom{grid-template-columns:1fr}
     }
 
@@ -121,8 +121,9 @@ function render_allposts_shortcode($atts = array()) {
     /* Image */
     .ap-card__img{display:block;overflow:hidden;border-radius:12px;margin:10px 10px 0}
     .ap-card__img img{width:100%;height:100%;object-fit:cover;display:block;border-radius:12px}
-    .ap-card--big .ap-card__img{height:400px}
-    .ap-card--small .ap-card__img{height:160px}
+    .ap-card--big .ap-card__img{height:100%;min-height:320px}
+    .ap-card--big .ap-card__img img{height:100%}
+    .ap-card--small .ap-card__img{height:180px}
     .ap-card--regular .ap-card__img{height:200px}
 
     /* Body */
@@ -135,15 +136,13 @@ function render_allposts_shortcode($atts = array()) {
     </style>
 
     <section class="ap-section">
-        <!-- Row 1: big + 2 small -->
+        <!-- Row 1: big + 2 small side-by-side -->
         <div class="ap-row-top">
             <div class="ap-col-big">
                 <?php allposts_render_card($cards[0], 'big'); ?>
             </div>
-            <div class="ap-col-right">
-                <?php allposts_render_card($cards[1], 'small'); ?>
-                <?php allposts_render_card($cards[2], 'small'); ?>
-            </div>
+            <?php allposts_render_card($cards[1], 'small'); ?>
+            <?php allposts_render_card($cards[2], 'small'); ?>
         </div>
 
         <!-- Row 2: 3 regular -->

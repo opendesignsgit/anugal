@@ -837,6 +837,13 @@ if (!class_exists('ROI_Submission_CPT')) {
     private function build_email_content($data, $results, $is_admin) {
       $roi_year1 = number_format($results['roi_year1'], 1);
       $roi_3year = number_format($results['roi_3year'], 1);
+      $show_low_roi = get_option(self::OPTION_SHOW_LOW_ROI, true);
+      $year1_is_low = (float) $results['roi_year1'] < 0;
+      $three_year_is_low = (float) $results['roi_3year'] < 0;
+      
+      // For customer emails, determine whether to show ROI values
+      $show_year1_roi = $is_admin || !$year1_is_low || $show_low_roi;
+      $show_3year_roi = $is_admin || !$three_year_is_low || $show_low_roi;
       
       ob_start();
       ?>
@@ -894,14 +901,24 @@ if (!class_exists('ROI_Submission_CPT')) {
             <?php endif; ?>
             
             <div class="highlight">
+              <?php if ($show_year1_roi): ?>
               <div style="margin-bottom:15px">
                 <div class="highlight-value"><?php echo $roi_year1; ?>%</div>
                 <div>Year 1 ROI</div>
               </div>
+              <?php endif; ?>
+              <?php if ($show_3year_roi): ?>
               <div>
                 <div class="highlight-value"><?php echo $roi_3year; ?>%</div>
                 <div>3-Year ROI</div>
               </div>
+              <?php endif; ?>
+              <?php if (!$show_year1_roi && !$show_3year_roi): ?>
+              <div>
+                <div>ROI results are being calculated for your scenario.</div>
+                <div style="margin-top:10px">Please contact us to discuss your investment options.</div>
+              </div>
+              <?php endif; ?>
             </div>
             
             <div class="section">
