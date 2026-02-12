@@ -22,6 +22,14 @@ if (!class_exists('ROI_Submission_CPT')) {
     const FREQ_FIRST_ONLY = 'first';
     const FREQ_EVERY_CALC = 'every';
     
+    // Display Options
+    const OPTION_SHOW_DOLLAR_VALUE = 'roi_show_dollar_value';
+    const OPTION_SHOW_DOWNLOAD_BUTTON = 'roi_show_download_button';
+    const OPTION_SHOW_LOW_ROI = 'roi_show_low_roi';
+    
+    // Customer Email Frequency Options
+    const OPTION_CUSTOMER_EMAIL_FREQUENCY = 'roi_customer_email_frequency';
+    
     // SMTP Configuration Options
     const OPTION_SMTP_ENABLED = 'roi_smtp_enabled';
     const OPTION_SMTP_HOST = 'roi_smtp_host';
@@ -253,6 +261,27 @@ if (!class_exists('ROI_Submission_CPT')) {
         'default' => self::FREQ_FIRST_ONLY,
       ));
       
+      // Customer email frequency setting
+      register_setting('roi_calculator_settings', self::OPTION_CUSTOMER_EMAIL_FREQUENCY, array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_text_field',
+        'default' => self::FREQ_FIRST_ONLY,
+      ));
+      
+      // Display options
+      register_setting('roi_calculator_settings', self::OPTION_SHOW_DOLLAR_VALUE, array(
+        'type' => 'boolean',
+        'default' => true,
+      ));
+      register_setting('roi_calculator_settings', self::OPTION_SHOW_DOWNLOAD_BUTTON, array(
+        'type' => 'boolean',
+        'default' => true,
+      ));
+      register_setting('roi_calculator_settings', self::OPTION_SHOW_LOW_ROI, array(
+        'type' => 'boolean',
+        'default' => true,
+      ));
+      
       // SMTP settings
       register_setting('roi_calculator_settings', self::OPTION_SMTP_ENABLED, array(
         'type' => 'boolean',
@@ -342,6 +371,51 @@ if (!class_exists('ROI_Submission_CPT')) {
                   <option value="<?php echo esc_attr(self::FREQ_EVERY_CALC); ?>" <?php selected($freq, self::FREQ_EVERY_CALC); ?>>Every calculation</option>
                 </select>
                 <p class="description">When to send emails to admin. "First submission only" sends email once per unique user email.</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_CUSTOMER_EMAIL_FREQUENCY); ?>">Customer Email Frequency</label></th>
+              <td>
+                <?php $cust_freq = get_option(self::OPTION_CUSTOMER_EMAIL_FREQUENCY, self::FREQ_FIRST_ONLY); ?>
+                <select id="<?php echo esc_attr(self::OPTION_CUSTOMER_EMAIL_FREQUENCY); ?>" name="<?php echo esc_attr(self::OPTION_CUSTOMER_EMAIL_FREQUENCY); ?>">
+                  <option value="<?php echo esc_attr(self::FREQ_FIRST_ONLY); ?>" <?php selected($cust_freq, self::FREQ_FIRST_ONLY); ?>>First submission only</option>
+                  <option value="<?php echo esc_attr(self::FREQ_EVERY_CALC); ?>" <?php selected($cust_freq, self::FREQ_EVERY_CALC); ?>>Every calculation</option>
+                </select>
+                <p class="description">When to send emails to the customer. "First submission only" sends email once per unique user email. "Every calculation" sends on each ROI calculation.</p>
+              </td>
+            </tr>
+          </table>
+          
+          <h2>Display Options</h2>
+          <table class="form-table">
+            <tr>
+              <th scope="row">Show Dollar Value in Result</th>
+              <td>
+                <label>
+                  <input type="checkbox" name="<?php echo esc_attr(self::OPTION_SHOW_DOLLAR_VALUE); ?>" value="1" <?php checked(get_option(self::OPTION_SHOW_DOLLAR_VALUE, true), true); ?>>
+                  Show dollar (USD) conversion values alongside primary currency in results
+                </label>
+                <p class="description">When enabled, the ROI results card will display USD equivalent amounts.</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Show Download Report Button</th>
+              <td>
+                <label>
+                  <input type="checkbox" name="<?php echo esc_attr(self::OPTION_SHOW_DOWNLOAD_BUTTON); ?>" value="1" <?php checked(get_option(self::OPTION_SHOW_DOWNLOAD_BUTTON, true), true); ?>>
+                  Show the "Download Report" button in the results card
+                </label>
+                <p class="description">When enabled, users can download a CSV report and receive it via email.</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Show Low ROI Status</th>
+              <td>
+                <label>
+                  <input type="checkbox" name="<?php echo esc_attr(self::OPTION_SHOW_LOW_ROI); ?>" value="1" <?php checked(get_option(self::OPTION_SHOW_LOW_ROI, true), true); ?>>
+                  Show the Return on Investment status indicator when the value is "Low ROI"
+                </label>
+                <p class="description">When disabled, the ROI status badge will be hidden if the calculated ROI is negative (Low ROI). Other status levels (Moderate, Strong, Excellent) are always shown.</p>
               </td>
             </tr>
           </table>
@@ -586,10 +660,18 @@ if (!class_exists('ROI_Submission_CPT')) {
       $admin_freq = get_option(self::OPTION_ADMIN_EMAIL_FREQUENCY, self::FREQ_FIRST_ONLY);
       $should_send_admin_email = ($admin_freq === self::FREQ_EVERY_CALC) || $is_new_submission;
       
-      // User always gets email on download report (handled separately), not on every calculation
+      // Customer email based on frequency setting
+      $customer_freq = get_option(self::OPTION_CUSTOMER_EMAIL_FREQUENCY, self::FREQ_FIRST_ONLY);
+      $should_send_customer_email = ($customer_freq === self::FREQ_EVERY_CALC) || $is_new_submission;
+      
       // Admin email based on frequency setting
       if ($should_send_admin_email) {
         $this->send_admin_email($data, $results);
+      }
+      
+      // Customer email based on frequency setting
+      if ($should_send_customer_email && !empty($data['email'])) {
+        $this->send_user_email($data, $results);
       }
 
       wp_send_json_success(array(
