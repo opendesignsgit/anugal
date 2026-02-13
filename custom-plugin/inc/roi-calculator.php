@@ -40,8 +40,11 @@ if (!class_exists('ROI_Calculator_Module')) {
       $ajax_config = sprintf(
         'var roiCalculatorAjax = %s;',
         wp_json_encode(array(
-          'ajaxurl' => admin_url('admin-ajax.php'),
-          'nonce'   => wp_create_nonce('roi_submission_nonce'),
+          'ajaxurl'            => admin_url('admin-ajax.php'),
+          'nonce'              => wp_create_nonce('roi_submission_nonce'),
+          'showDollarValue'    => (bool) get_option('roi_show_dollar_value', true),
+          'showDownloadButton' => (bool) get_option('roi_show_download_button', true),
+          'showLowRoi'         => (bool) get_option('roi_show_low_roi', true),
         ))
       );
       wp_add_inline_script('roi-calculator-inline-script', $ajax_config, 'before');
@@ -170,9 +173,9 @@ if (!class_exists('ROI_Calculator_Module')) {
                 <div class="roi-card__label">Implementation Cost<br>(One-Time)</div>
                 <div class="roi-card__sublabel" id="roi-impl-alt"></div>
               </div>
-              <div class="roi-card__divider"></div>
+              <div class="roi-card__divider" id="roi-year1-divider-top"></div>
 
-              <div class="roi-card__item">
+              <div class="roi-card__item" id="roi-year1-block">
                 <div class="roi-card__value">
                   <span id="roi-year1-value">0</span>
                   <span class="roi-card__percent">%</span>
@@ -181,9 +184,9 @@ if (!class_exists('ROI_Calculator_Module')) {
                 <div class="roi-card__sublabel" id="roi-year1-net"></div>
                 <div class="roi-card__status" id="roi-year1-status"></div>
               </div>
-              <div class="roi-card__divider"></div>
+              <div class="roi-card__divider" id="roi-year1-divider-bottom"></div>
 
-              <div class="roi-card__item">
+              <div class="roi-card__item" id="roi-3year-block">
                 <div class="roi-card__value">
                   <span id="roi-3year-value">0</span>
                   <span class="roi-card__percent">%</span>
@@ -192,7 +195,7 @@ if (!class_exists('ROI_Calculator_Module')) {
                 <div class="roi-card__sublabel" id="roi-3year-net"></div>
                 <div class="roi-card__status" id="roi-3year-status"></div>
               </div>
-              <div class="roi-card__divider"></div>
+              <div class="roi-card__divider" id="roi-3year-divider-bottom"></div>
 
               <div class="roi-card__item">
                 <div class="roi-card__value roi-card__value--small">
@@ -752,25 +755,44 @@ CSS;
   function renderResults(result) {
     var isUS = result.region === 'US';
     var currSymbol = isUS ? '$' : '€';
+    var settings = (typeof roiCalculatorAjax !== 'undefined') ? roiCalculatorAjax : {};
+    var showDollar = settings.showDollarValue !== false;
+    var showDownload = settings.showDownloadButton !== false;
+    var showLowRoi = settings.showLowRoi !== false;
     
     // Operational Efficiency Gained - Hours as primary, monetary as secondary
     el('roi-efficiency-value').innerText = formatNumber(Math.round(result.hours_saved_annual));
     var savingsRounded = roundToNearest(isUS ? result.annual_savings_usd : result.annual_savings_eur, 100);
-    el('roi-efficiency-monetary').innerText = '≈ ' + currSymbol + formatNumber(savingsRounded) + '/year';
+    if (showDollar) {
+      el('roi-efficiency-monetary').innerText = '≈ ' + currSymbol + formatNumber(savingsRounded) + '/year';
+      el('roi-efficiency-monetary').style.display = '';
+    } else {
+      el('roi-efficiency-monetary').style.display = 'none';
+    }
     
     // Subscription Cost (Annual) - rounded to nearest 100
     var subscriptionRounded = roundToNearest(isUS ? result.annual_subscription_usd : result.annual_subscription_eur, 100);
     el('roi-subscription-currency').innerText = currSymbol;
     el('roi-subscription-value').innerText = formatNumber(subscriptionRounded);
     var subscriptionAlt = roundToNearest(isUS ? result.annual_subscription_eur : result.annual_subscription_usd, 100);
-    el('roi-subscription-alt').innerText = '≈ ' + (isUS ? '€' : '$') + formatNumber(subscriptionAlt);
+    if (showDollar) {
+      el('roi-subscription-alt').innerText = '≈ ' + (isUS ? '€' : '$') + formatNumber(subscriptionAlt);
+      el('roi-subscription-alt').style.display = '';
+    } else {
+      el('roi-subscription-alt').style.display = 'none';
+    }
     
     // Implementation Cost (One-Time) - rounded to nearest 500
     var implRounded = roundToNearest(isUS ? result.implementation_cost_usd : result.implementation_cost_eur, 500);
     el('roi-impl-currency').innerText = currSymbol;
     el('roi-impl-value').innerText = formatNumber(implRounded);
     var implAlt = roundToNearest(isUS ? result.implementation_cost_eur : result.implementation_cost_usd, 500);
-    el('roi-impl-alt').innerText = '≈ ' + (isUS ? '€' : '$') + formatNumber(implAlt);
+    if (showDollar) {
+      el('roi-impl-alt').innerText = '≈ ' + (isUS ? '€' : '$') + formatNumber(implAlt);
+      el('roi-impl-alt').style.display = '';
+    } else {
+      el('roi-impl-alt').style.display = 'none';
+    }
     
     // ROI Year 1 with net value and status indicator
     var roi1 = formatPercent(result.roi_year1);
@@ -784,8 +806,22 @@ CSS;
     }
     var status1 = getROIStatus(result.roi_year1);
     var statusEl1 = el('roi-year1-status');
-    statusEl1.innerText = status1.label;
-    statusEl1.className = 'roi-card__status ' + status1.className;
+    var year1Block = el('roi-year1-block');
+    var year1DivTop = el('roi-year1-divider-top');
+    var year1DivBot = el('roi-year1-divider-bottom');
+    if (!showLowRoi && result.roi_year1 < 0) {
+      // Hide the entire Year 1 ROI block and its dividers
+      if (year1Block) year1Block.style.display = 'none';
+      if (year1DivTop) year1DivTop.style.display = 'none';
+      if (year1DivBot) year1DivBot.style.display = 'none';
+    } else {
+      if (year1Block) year1Block.style.display = '';
+      if (year1DivTop) year1DivTop.style.display = '';
+      if (year1DivBot) year1DivBot.style.display = '';
+      statusEl1.innerText = status1.label;
+      statusEl1.className = 'roi-card__status ' + status1.className;
+      statusEl1.style.display = '';
+    }
     
     // ROI 3 Years with net value and status indicator
     var roi3 = formatPercent(result.roi_3y);
@@ -798,8 +834,19 @@ CSS;
     }
     var status3 = getROIStatus(result.roi_3y);
     var statusEl3 = el('roi-3year-status');
-    statusEl3.innerText = status3.label;
-    statusEl3.className = 'roi-card__status ' + status3.className;
+    var threeYearBlock = el('roi-3year-block');
+    var threeYearDivBot = el('roi-3year-divider-bottom');
+    if (!showLowRoi && result.roi_3y < 0) {
+      // Hide the entire 3-Year ROI block and its divider
+      if (threeYearBlock) threeYearBlock.style.display = 'none';
+      if (threeYearDivBot) threeYearDivBot.style.display = 'none';
+    } else {
+      if (threeYearBlock) threeYearBlock.style.display = '';
+      if (threeYearDivBot) threeYearDivBot.style.display = '';
+      statusEl3.innerText = status3.label;
+      statusEl3.className = 'roi-card__status ' + status3.className;
+      statusEl3.style.display = '';
+    }
     
     // Payback Period - formatted as years + months
     var paybackFormatted = formatPaybackPeriod(result.payback_years);
@@ -811,10 +858,10 @@ CSS;
       el('roi-payback-note').innerText = 'Savings do not cover annual costs';
     }
     
-    // Show download button
+    // Show download button based on setting
     var downloadWrap = el('roi-download-wrap');
     if (downloadWrap) {
-      downloadWrap.style.display = 'block';
+      downloadWrap.style.display = showDownload ? 'block' : 'none';
     }
   }
 

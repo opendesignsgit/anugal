@@ -160,11 +160,11 @@ class Product_Tours_Single_File {
 
         ob_start();
         ?>
-        <section class="pt-hero">
+        <!--<section class="pt-hero">
             <div class="pt-hero__kicker"><?php echo esc_html($data['hero']['kicker']); ?></div>
             <h1 class="pt-hero__title"><?php echo esc_html($data['hero']['title']); ?></h1>
             <p class="pt-hero__subtitle"><?php echo esc_html($data['hero']['subtitle']); ?></p>
-        </section>
+        </section>-->
 
         <section class="pt-filters">
             <div class="pt-chips" id="pt-chips"></div>
@@ -172,10 +172,10 @@ class Product_Tours_Single_File {
 
         <section class="pt-grid" id="pt-grid" aria-live="polite"></section>
 
-        <div class="pt-loadmore-wrap">
-            <button id="pt-loadmore" class="pt-loadmore" disabled>
+        <div class="pt-loadmore-wrap loadmore-wrap">
+            <button id="pt-loadmore" class="pt-loadmore loadmore" disabled>
                 <span>Load More</span>
-                <span class="pt-loadmore__arrow">></span>
+                <span class="pt-loadmore__arrow loadmore__arrow"><img src="https://dev.opendesignsin.com/anugal-wp/wp-content/uploads/2026/01/emore-arrow-img1.png" alt=""/></span>
             </button>
         </div>
         <?php
@@ -184,45 +184,7 @@ class Product_Tours_Single_File {
 
     private function get_inline_css() {
         return <<<CSS
-/* Hero */
-.pt-hero { text-align:center; padding:64px 16px 24px; }
-.pt-hero__kicker { display:inline-block; font-weight:600; font-size:12px; background:#E8EDFF; color:#3E54E8; padding:6px 12px; border-radius:999px; margin-bottom:12px; }
-.pt-hero__title { font-size:40px; line-height:1.2; margin:0 0 8px; }
-.pt-hero__subtitle { max-width:800px; margin:0 auto; color:#555; }
 
-/* Filters (chips) */
-.pt-filters { padding:24px 16px 8px; }
-.pt-chips { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
-.pt-chip { appearance:none; border:1px solid #E0E0E0; background:#fff; color:#222; font-weight:600; font-size:13px; border-radius:999px; padding:10px 14px; cursor:pointer; transition:all .2s ease; }
-.pt-chip:hover { border-color:#cfd4ff; }
-.pt-chip--all { background:#EEF2FF; border-color:#EEF2FF; }
-.pt-chip--active { background:#EEF2FF; border-color:#cfd4ff; color:#223; }
-
-/* Grid */
-.pt-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:24px; padding:16px; max-width:1200px; margin:0 auto; }
-@media (max-width:1024px){ .pt-grid { grid-template-columns:repeat(2, 1fr); } }
-@media (max-width:640px){ .pt-grid { grid-template-columns:1fr; } }
-
-/* Card */
-.pt-card { background:#ffffff; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.06); overflow:hidden; border:1px solid #F0F0F0; }
-.pt-card__image { display:block; background:linear-gradient(135deg,#2C3E96,#6B57E9); height:180px; }
-.pt-card__image img { width:100%; height:100%; object-fit:cover; }
-.pt-card__body { padding:16px; }
-.pt-card__badge { display:inline-block; background:#EEF2FF; color:#3E54E8; font-size:12px; font-weight:700; padding:6px 10px; border-radius:999px; margin-bottom:8px; }
-.pt-card__title { font-size:18px; line-height:1.35; margin:0 0 8px; color:#222; }
-.pt-card__excerpt { color:#555; font-size:14px; margin:0 0 10px; }
-.pt-card__cta { font-weight:700; font-size:13px; color:#3E54E8; text-decoration:none; }
-
-/* Skeleton */
-.pt-card--skeleton { height:280px; background:linear-gradient(90deg,#f2f2f2 25%,#e9e9e9 37%,#f2f2f2 63%); background-size:400% 100%; animation:shine 1.2s ease infinite; border-radius:12px; }
-@keyframes shine { 0%{background-position:0% 0;} 100%{background-position:100% 0;} }
-
-/* Load More */
-.pt-loadmore-wrap { display:flex; justify-content:center; padding:24px 0 64px; }
-.pt-loadmore { display:inline-flex; align-items:center; gap:12px; background:#111827; color:#fff; border:none; border-radius:8px; padding:12px 18px; font-weight:700; cursor:pointer; }
-.pt-loadmore:disabled { opacity:.5; cursor:not-allowed; }
-.pt-loadmore__arrow { display:inline-block; background:#000; color:#fff; border-radius:8px; padding:8px 12px; }
-.pt-empty { text-align:center; color:#777; grid-column:1 / -1; padding:24px; }
 CSS;
     }
 
@@ -449,7 +411,7 @@ CSS;
         '<img src="' + featured + '" alt="' + escapeAttr(title) + '">' +
       '</a>' +
       '<div class="pt-card__body">' +
-        '<span class="pt-card__badge">' + escapeHTML(termName) + '</span>' +
+        '<h5 class="pt-card__badge">' + escapeHTML(termName) + '</h5>' +
         '<h3 class="pt-card__title">' + escapeHTML(title) + '</h3>' +
         '<p class="pt-card__excerpt">' + escapeHTML(excerpt) + '</p>' +
         '<a href="' + link + '" class="pt-card__cta">Read More</a>' +

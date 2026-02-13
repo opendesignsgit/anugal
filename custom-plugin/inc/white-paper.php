@@ -120,35 +120,31 @@ if (!class_exists('White_Paper_Module')) {
 
             ob_start(); ?>
             <section id="white-paper-module" class="wp-wrap" data-wp-init="0">
-                <div class="wp-header">
-                    <div class="wp-header__text">
-                        <h2 class="wp-title">
-                            <span class="wp-title__first"><?php echo esc_html($atts['title']); ?></span>
-                            <span class="wp-title__accent"><?php echo esc_html($atts['title_accent']); ?></span>
+                <div class="wp-header postlistHead">
+                    <div class="wp-header__text comtitlestb plhText">
+                        <h2 class="wp-title plhTitle">
+                            <span class="wp-title__first plhTitleFirst"><?php echo esc_html($atts['title']); ?></span>
+                            <span class="wp-title__accent plhTitleAccent"><?php echo esc_html($atts['title_accent']); ?></span>
                         </h2>
-                        <p class="wp-subtitle"><?php echo esc_html($atts['subtitle']); ?></p>
+                        <p class="wp-subtitle plhsubTitle"><?php echo esc_html($atts['subtitle']); ?></p>
                     </div>
-                    <div class="wp-header__tools">
-                        <div class="wp-searchbar">
-                            <div class="wp-input-wrap">
-                                <svg class="wp-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <div class="wp-header__tools plhTools">
+                        <div class="wp-searchbar plhSearchbar">
+                            <div class="plhinSearwrap">
+                                <svg class="wp-search-icon plhsearchicon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="11" cy="11" r="8"></circle>
                                     <path d="m21 21-4.35-4.35"></path>
                                 </svg>
-                                <input type="text" id="wp-search-input" class="wp-searchbar__input" placeholder="Search by Keyword" aria-label="Search by Keyword">
-                                <button id="wp-clear-btn" class="wp-clear-btn" type="button" title="Clear search" aria-label="Clear search">×</button>
-                            </div>
-                            <button id="wp-search-btn" class="wp-searchbar__btn" type="button">SEARCH</button>
-                            <button id="wp-sort-toggle" class="wp-searchbar__filter" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="wp-sort-menu" title="Sort">
-                                <span class="wp-filter__icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="4" y1="6" x2="20" y2="6"></line>
-                                        <line x1="4" y1="12" x2="16" y2="12"></line>
-                                        <line x1="4" y1="18" x2="12" y2="18"></line>
-                                    </svg>
-                                </span>
+								<div class="wp-input-wrap plhinputwrap">
+									<input type="text" id="wp-search-input" class="plhsearchbar__input" placeholder="Search by Keyword" aria-label="Search by Keyword">
+									<button id="wp-clear-btn" class="wp-clear-btn plhclearbtn" type="button" title="Clear search" aria-label="Clear search">×</button>
+								</div>
+								<button id="wp-search-btn" class="wp-searchbar__btn plhSearchbarbtn" type="button">SEARCH</button>
+							</div>
+                            <button id="wp-sort-toggle" class="wp-searchbar__filter plhfilterbtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="wp-sort-menu" title="Sort">
+                                <img src="https://dev.opendesignsin.com/anugal-wp/wp-content/uploads/2026/02/FunnelSimple.png" alt=""/>
                             </button>
-                            <div id="wp-sort-menu" class="wp-sort-menu" role="menu" aria-hidden="true">
+                            <div id="wp-sort-menu" class="wp-sort-menu plhsortmenu" role="menu" aria-hidden="true">
                                 <button class="wp-sort-menu__item" data-orderby="date" data-order="desc" role="menuitem" type="button">Newest</button>
                                 <button class="wp-sort-menu__item" data-orderby="date" data-order="asc" role="menuitem" type="button">Oldest</button>
                                 <button class="wp-sort-menu__item" data-orderby="title" data-order="asc" role="menuitem" type="button">Title A–Z</button>
@@ -160,10 +156,10 @@ if (!class_exists('White_Paper_Module')) {
 
                 <section id="wp-grid" class="wp-grid" aria-live="polite"></section>
 
-                <div class="wp-loadmore-wrap">
-                    <button id="wp-loadmore" class="wp-loadmore" disabled type="button">
+                <div class="wp-loadmore-wrap loadmore-wrap">
+                    <button id="wp-loadmore" class="wp-loadmore loadmore" disabled type="button">
                         <span>Load More</span>
-                        <span class="wp-loadmore__arrow">›</span>
+                        <span class="wp-loadmore__arrow loadmore__arrow"><img src="https://dev.opendesignsin.com/anugal-wp/wp-content/uploads/2026/01/emore-arrow-img1.png" alt=""/></span>
                     </button>
                 </div>
             </section>
@@ -257,51 +253,7 @@ if (!class_exists('White_Paper_Module')) {
 
         private function inline_css() {
             return <<<CSS
-.wp-wrap{max-width:1200px;margin:0 auto;padding:24px 16px 48px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-.wp-header{display:grid;grid-template-columns:1fr 520px;gap:24px;align-items:start;margin-bottom:24px}
-@media (max-width:1024px){.wp-header{grid-template-columns:1fr}}
-.wp-title{font-size:36px;line-height:1.2;margin:0;font-weight:800}
-.wp-title__first{color:#111}
-.wp-title__accent{color:#3E54E8;margin-left:8px}
-.wp-subtitle{margin:12px 0 0;color:#555;max-width:480px;line-height:1.5}
-.wp-header__tools{display:flex;justify-content:flex-end}
-.wp-searchbar{display:flex;gap:12px;align-items:center}
-.wp-input-wrap{position:relative;display:flex;align-items:center}
-.wp-search-icon{position:absolute;left:16px;color:#999}
-.wp-searchbar__input{border:1px solid #E0E0E0;border-radius:999px;padding:12px 40px 12px 44px;font-size:14px;outline:none;min-width:280px;background:#fff}
-.wp-searchbar__input:focus{border-color:#3E54E8}
-@media (max-width:640px){.wp-searchbar__input{min-width:200px}}
-.wp-clear-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:999px;border:none;background:#E0E0E0;color:#666;display:none;cursor:pointer;font-size:16px;line-height:22px;text-align:center}
-.wp-clear-btn:hover{background:#ccc}
-.wp-searchbar__btn{background:#3E54E8;color:#fff;border:none;border-radius:10px;font-weight:600;padding:12px 20px;cursor:pointer;font-size:14px}
-.wp-searchbar__btn:hover{background:#2d43d6}
-.wp-searchbar__filter{background:#fff;border:1px solid #E0E0E0;border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.wp-searchbar__filter:hover{background:#f5f5f5}
-.wp-filter__icon{display:flex;color:#666}
-.wp-sort-menu{position:absolute;margin-top:8px;right:16px;background:#fff;border:1px solid #E0E0E0;box-shadow:0 6px 20px rgba(0,0,0,.08);border-radius:12px;display:none;min-width:180px;z-index:100;overflow:hidden}
-.wp-sort-menu[aria-hidden="false"]{display:block}
-.wp-sort-menu__item{display:block;width:100%;text-align:left;padding:12px 16px;border:none;background:#fff;cursor:pointer;font-size:14px}
-.wp-sort-menu__item:hover{background:#F7F7F7}
-.wp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-@media (max-width:1024px){.wp-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:640px){.wp-grid{grid-template-columns:1fr}}
-.wp-card{background:#fff;border-radius:16px;border:1px solid #EEE;box-shadow:0 4px 12px rgba(0,0,0,.04);overflow:hidden;transition:box-shadow .2s,transform .2s}
-.wp-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
-.wp-card__image{display:block;height:200px;background:#f0f0f0;overflow:hidden}
-.wp-card__image img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
-.wp-card:hover .wp-card__image img{transform:scale(1.05)}
-.wp-card__body{padding:20px}
-.wp-card__title{font-size:16px;font-weight:700;margin:0 0 8px;color:#111;line-height:1.4}
-.wp-card__desc{font-size:14px;line-height:1.6;color:#555;margin:0 0 16px;min-height:44px}
-.wp-card__cta{font-weight:600;font-size:13px;color:#3E54E8;text-decoration:none;text-transform:uppercase;letter-spacing:.5px}
-.wp-card__cta:hover{text-decoration:underline}
-.wp-card--skeleton{height:340px;background:linear-gradient(90deg,#f2f2f2 25%,#e9e9e9 37%,#f2f2f2 63%);background-size:400% 100%;animation:wp-shine 1.2s ease infinite;border-radius:16px}
-@keyframes wp-shine{0%{background-position:0% 0}100%{background-position:100% 0}}
-.wp-loadmore-wrap{display:flex;justify-content:center;padding:40px 0}
-.wp-loadmore{display:inline-flex;align-items:center;gap:12px;background:#111827;color:#fff;border:none;border-radius:10px;padding:14px 24px;font-weight:600;cursor:pointer;font-size:14px}
-.wp-loadmore:disabled{opacity:.5;cursor:not-allowed}
-.wp-loadmore__arrow{display:inline-flex;align-items:center;justify-content:center;background:#000;color:#fff;border-radius:8px;padding:6px 12px;font-size:18px}
-.wp-empty{text-align:center;color:#777;grid-column:1 / -1;padding:48px 24px}
+
 CSS;
         }
 

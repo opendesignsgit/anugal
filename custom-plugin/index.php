@@ -166,6 +166,11 @@ include(plugin_dir_path(__FILE__) . '/inc/white-paper.php');
 
 /** White Paper **/
 
+/** All Posts **/
+
+include(plugin_dir_path(__FILE__) . '/inc/allposts.php');
+
+/** All Posts **/
 
 /** PROJECTS **/
 

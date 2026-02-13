@@ -120,35 +120,31 @@ if (!class_exists('News_Room_Module')) {
 
             ob_start(); ?>
             <section id="news-room-module" class="nr-wrap" data-nr-init="0">
-                <div class="nr-header">
-                    <div class="nr-header__text">
-                        <h2 class="nr-title">
-                            <span class="nr-title__first"><?php echo esc_html($atts['title']); ?></span>
-                            <span class="nr-title__accent"><?php echo esc_html($atts['title_accent']); ?></span>
+                <div class="nr-header postlistHead">
+                    <div class="nr-header__text comtitlestb plhText">
+                        <h2 class="nr-title plhTitle">
+                            <span class="nr-title__first plhTitleFirst"><?php echo esc_html($atts['title']); ?></span>
+                            <span class="nr-title__accent plhTitleAccent"><?php echo esc_html($atts['title_accent']); ?></span>
                         </h2>
-                        <p class="nr-subtitle"><?php echo esc_html($atts['subtitle']); ?></p>
+                        <p class="nr-subtitle plhsubTitle"><?php echo esc_html($atts['subtitle']); ?></p>
                     </div>
-                    <div class="nr-header__tools">
-                        <div class="nr-searchbar">
-                            <div class="nr-input-wrap">
-                                <svg class="nr-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <path d="m21 21-4.35-4.35"></path>
-                                </svg>
-                                <input type="text" id="nr-search-input" class="nr-searchbar__input" placeholder="Search by Keyword" aria-label="Search by Keyword">
-                                <button id="nr-clear-btn" class="nr-clear-btn" type="button" title="Clear search" aria-label="Clear search">×</button>
+                    <div class="nr-header__tools plhTools">
+                        <div class="nr-searchbar plhSearchbar">
+                            <div class="plhinSearwrap">
+								<svg class="nr-search-icon plhsearchicon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<circle cx="11" cy="11" r="8"></circle>
+									<path d="m21 21-4.35-4.35"></path>
+								</svg>
+								<div class="nr-input-wrap plhinputwrap">
+									<input type="text" id="nr-search-input" class="plhsearchbar__input" placeholder="Search by Keyword" aria-label="Search by Keyword">
+									<button id="nr-clear-btn" class="nr-clear-btn plhclearbtn" type="button" title="Clear search" aria-label="Clear search">×</button>
+								</div>
+								<button id="nr-search-btn" class="nr-searchbar__btn plhSearchbarbtn" type="button">SEARCH</button>
                             </div>
-                            <button id="nr-search-btn" class="nr-searchbar__btn" type="button">SEARCH</button>
-                            <button id="nr-sort-toggle" class="nr-searchbar__filter" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="nr-sort-menu" title="Sort">
-                                <span class="nr-filter__icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="4" y1="6" x2="20" y2="6"></line>
-                                        <line x1="4" y1="12" x2="16" y2="12"></line>
-                                        <line x1="4" y1="18" x2="12" y2="18"></line>
-                                    </svg>
-                                </span>
+                            <button id="nr-sort-toggle" class="nr-searchbar__filter plhfilterbtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="nr-sort-menu" title="Sort">
+                                <img src="https://dev.opendesignsin.com/anugal-wp/wp-content/uploads/2026/02/FunnelSimple.png" alt=""/>
                             </button>
-                            <div id="nr-sort-menu" class="nr-sort-menu" role="menu" aria-hidden="true">
+                            <div id="nr-sort-menu" class="nr-sort-menu plhsortmenu" role="menu" aria-hidden="true">
                                 <button class="nr-sort-menu__item" data-orderby="date" data-order="desc" role="menuitem" type="button">Newest</button>
                                 <button class="nr-sort-menu__item" data-orderby="date" data-order="asc" role="menuitem" type="button">Oldest</button>
                                 <button class="nr-sort-menu__item" data-orderby="title" data-order="asc" role="menuitem" type="button">Title A–Z</button>
@@ -160,10 +156,10 @@ if (!class_exists('News_Room_Module')) {
 
                 <section id="nr-grid" class="nr-grid" aria-live="polite"></section>
 
-                <div class="nr-loadmore-wrap">
-                    <button id="nr-loadmore" class="nr-loadmore" disabled type="button">
+                <div class="nr-loadmore-wrap loadmore-wrap">
+                    <button id="nr-loadmore" class="nr-loadmore loadmore" disabled type="button">
                         <span>Load More</span>
-                        <span class="nr-loadmore__arrow">›</span>
+                        <span class="nr-loadmore__arrow loadmore__arrow"><img src="https://dev.opendesignsin.com/anugal-wp/wp-content/uploads/2026/01/emore-arrow-img1.png" alt=""/></span>
                     </button>
                 </div>
             </section>
@@ -257,49 +253,7 @@ if (!class_exists('News_Room_Module')) {
 
         private function inline_css() {
             return <<<CSS
-.nr-wrap{max-width:1200px;margin:0 auto;padding:24px 16px 48px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-.nr-header{display:grid;grid-template-columns:1fr 520px;gap:24px;align-items:start;margin-bottom:24px}
-@media (max-width:1024px){.nr-header{grid-template-columns:1fr}}
-.nr-title{font-size:36px;line-height:1.2;margin:0;font-weight:800}
-.nr-title__first{color:#111}
-.nr-title__accent{color:#3E54E8;margin-left:8px}
-.nr-subtitle{margin:12px 0 0;color:#555;max-width:480px;line-height:1.5}
-.nr-header__tools{display:flex;justify-content:flex-end}
-.nr-searchbar{display:flex;gap:12px;align-items:center}
-.nr-input-wrap{position:relative;display:flex;align-items:center}
-.nr-search-icon{position:absolute;left:16px;color:#999}
-.nr-searchbar__input{border:1px solid #E0E0E0;border-radius:999px;padding:12px 40px 12px 44px;font-size:14px;outline:none;min-width:280px;background:#fff}
-.nr-searchbar__input:focus{border-color:#3E54E8}
-@media (max-width:640px){.nr-searchbar__input{min-width:200px}}
-.nr-clear-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:999px;border:none;background:#E0E0E0;color:#666;display:none;cursor:pointer;font-size:16px;line-height:22px;text-align:center}
-.nr-clear-btn:hover{background:#ccc}
-.nr-searchbar__btn{background:#3E54E8;color:#fff;border:none;border-radius:10px;font-weight:600;padding:12px 20px;cursor:pointer;font-size:14px}
-.nr-searchbar__btn:hover{background:#2d43d6}
-.nr-searchbar__filter{background:#fff;border:1px solid #E0E0E0;border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.nr-searchbar__filter:hover{background:#f5f5f5}
-.nr-filter__icon{display:flex;color:#666}
-.nr-sort-menu{position:absolute;margin-top:8px;right:16px;background:#fff;border:1px solid #E0E0E0;box-shadow:0 6px 20px rgba(0,0,0,.08);border-radius:12px;display:none;min-width:180px;z-index:100;overflow:hidden}
-.nr-sort-menu[aria-hidden="false"]{display:block}
-.nr-sort-menu__item{display:block;width:100%;text-align:left;padding:12px 16px;border:none;background:#fff;cursor:pointer;font-size:14px}
-.nr-sort-menu__item:hover{background:#F7F7F7}
-.nr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-@media (max-width:1024px){.nr-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:640px){.nr-grid{grid-template-columns:1fr}}
-.nr-card{background:#fff;border-radius:16px;border:1px solid #EEE;box-shadow:0 4px 12px rgba(0,0,0,.04);overflow:hidden;transition:box-shadow .2s,transform .2s}
-.nr-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
-.nr-card__image{display:block;height:200px;background:#f0f0f0;overflow:hidden}
-.nr-card__image img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
-.nr-card:hover .nr-card__image img{transform:scale(1.05)}
-.nr-card__body{padding:20px}
-.nr-card__desc{font-size:14px;line-height:1.6;color:#333;margin:0 0 16px;min-height:44px}
-.nr-card__cta{font-weight:600;font-size:13px;color:#3E54E8;text-decoration:none;text-transform:uppercase;letter-spacing:.5px}
-.nr-card__cta:hover{text-decoration:underline}
-.nr-card--skeleton{height:320px;background:linear-gradient(90deg,#f2f2f2 25%,#e9e9e9 37%,#f2f2f2 63%);background-size:400% 100%;animation:nr-shine 1.2s ease infinite;border-radius:16px}
-@keyframes nr-shine{0%{background-position:0% 0}100%{background-position:100% 0}}
-.nr-loadmore-wrap{display:flex;justify-content:center;padding:40px 0}
-.nr-loadmore{display:inline-flex;align-items:center;gap:12px;background:#111827;color:#fff;border:none;border-radius:10px;padding:14px 24px;font-weight:600;cursor:pointer;font-size:14px}
-.nr-loadmore:disabled{opacity:.5;cursor:not-allowed}
-.nr-loadmore__arrow{display:inline-flex;align-items:center;justify-content:center;background:#000;color:#fff;border-radius:8px;padding:6px 12px;font-size:18px}
+
 .nr-empty{text-align:center;color:#777;grid-column:1 / -1;padding:48px 24px}
 CSS;
         }
