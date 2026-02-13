@@ -53,7 +53,7 @@ if (!class_exists('Recent_Blogs_Module')) {
             ob_start(); ?>
             <?php if ($featured_post): ?>
             <section class="rb-featured-blog">
-                <div class="rb-featured-blog__hero" style="background-image: url('<?php echo esc_url($featured_post['featured']); ?>');">
+                <div class="rb-featured-blog__hero" style="background-image: url(&quot;<?php echo esc_url($featured_post['featured']); ?>&quot;);">
                     <div class="rb-featured-blog__overlay"></div>
                     <div class="rb-featured-blog__content">
                         <span class="rb-featured-blog__badge">Featured Blog</span>
@@ -206,12 +206,7 @@ if (!class_exists('Recent_Blogs_Module')) {
             }
             
             // Get excerpt for featured blog
-            $excerpt = '';
-            if (has_excerpt($p)) {
-                $excerpt = get_the_excerpt($p);
-            } else {
-                $excerpt = wp_trim_words(strip_shortcodes($p->post_content), 30, '...');
-            }
+            $excerpt = get_the_excerpt($p);
 
             return array(
                 'id'         => (int) $p->ID,
@@ -263,7 +258,7 @@ if (!class_exists('Recent_Blogs_Module')) {
 
 .rb-featured-blog__badge {
     display: inline-block;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(10px);
     color: #fff;
     padding: 8px 20px;
