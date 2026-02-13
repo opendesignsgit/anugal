@@ -51,9 +51,13 @@ if (!class_exists('Recent_Blogs_Module')) {
 
             // Markup (note the container id recent-blogs-module used by MutationObserver)
             ob_start(); ?>
-            <?php if ($featured_post): ?>
+            <?php if ($featured_post): 
+                $bg_url = esc_url($featured_post['featured']);
+                // Additional validation: ensure the URL doesn't contain dangerous characters
+                $bg_url = str_replace(array('"', "'", '(', ')'), '', $bg_url);
+            ?>
             <section class="rb-featured-blog">
-                <div class="rb-featured-blog__hero" style="background-image: url(&quot;<?php echo esc_url($featured_post['featured']); ?>&quot;);">
+                <div class="rb-featured-blog__hero" style="background-image: url(&quot;<?php echo $bg_url; ?>&quot;);">
                     <div class="rb-featured-blog__overlay"></div>
                     <div class="rb-featured-blog__content">
                         <span class="rb-featured-blog__badge">Featured Blog</span>
@@ -206,7 +210,12 @@ if (!class_exists('Recent_Blogs_Module')) {
             }
             
             // Get excerpt for featured blog
-            $excerpt = get_the_excerpt($p);
+            $excerpt = '';
+            if (!empty($p->post_excerpt)) {
+                $excerpt = $p->post_excerpt;
+            } else {
+                $excerpt = wp_trim_words(strip_shortcodes($p->post_content), 30, '...');
+            }
 
             return array(
                 'id'         => (int) $p->ID,
@@ -259,13 +268,19 @@ if (!class_exists('Recent_Blogs_Module')) {
 .rb-featured-blog__badge {
     display: inline-block;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(10px);
     color: #fff;
     padding: 8px 20px;
     border-radius: 20px;
     font-size: 14px;
     font-weight: 500;
     margin-bottom: 24px;
+}
+
+@supports (backdrop-filter: blur(10px)) {
+    .rb-featured-blog__badge {
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+    }
 }
 
 .rb-featured-blog__title {
