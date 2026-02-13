@@ -21,9 +21,10 @@ if (!class_exists('Recent_Blogs_Module')) {
 
         public function shortcode($atts = array()) {
             $atts = shortcode_atts(array(
-                'title'     => 'Recent',
-                'subtitle'  => 'Browse through our recent thoughts and expert perspectives on identity and access management.',
-                'per_page'  => 6,
+                'title'            => 'Recent',
+                'subtitle'         => 'Browse through our recent thoughts and expert perspectives on identity and access management.',
+                'per_page'         => 6,
+                'featured_post_id' => 0, // 0 = auto (most recent), or specific post ID
             ), $atts, 'recent_blogs');
 
             // Styles
@@ -31,21 +32,45 @@ if (!class_exists('Recent_Blogs_Module')) {
             wp_enqueue_style('recent-blogs-inline-style');
             wp_add_inline_style('recent-blogs-inline-style', $this->inline_css());
 
+            // Get featured post
+            $featured_post = $this->get_featured_post((int) $atts['featured_post_id']);
+            
             // Scripts
             wp_register_script('recent-blogs-inline-script', false, array(), '1.0.5', true);
             wp_enqueue_script('recent-blogs-inline-script');
 
             $data = array(
-                'restUrl'   => esc_url_raw(get_rest_url()),               // e.g. https://domain/subdir/wp-json/
-                'siteUrl'   => home_url(),                                 // e.g. https://domain/subdir
-                'ajaxUrl'   => admin_url('admin-ajax.php'),                // fallback endpoint
-                'perPage'   => max(1, (int) $atts['per_page']),
+                'restUrl'       => esc_url_raw(get_rest_url()),               // e.g. https://domain/subdir/wp-json/
+                'siteUrl'       => home_url(),                                 // e.g. https://domain/subdir
+                'ajaxUrl'       => admin_url('admin-ajax.php'),                // fallback endpoint
+                'perPage'       => max(1, (int) $atts['per_page']),
+                'excludePostId' => $featured_post ? $featured_post['id'] : 0,  // Exclude featured post from grid
             );
             wp_add_inline_script('recent-blogs-inline-script', 'window.RecentBlogsData = ' . wp_json_encode($data) . ';', 'before');
             wp_add_inline_script('recent-blogs-inline-script', $this->inline_js(), 'after');
 
             // Markup (note the container id recent-blogs-module used by MutationObserver)
             ob_start(); ?>
+            <?php if ($featured_post): ?>
+            <section class="rb-featured-blog">
+                <div class="rb-featured-blog__hero" style="background-image: url('<?php echo esc_url($featured_post['featured']); ?>');">
+                    <div class="rb-featured-blog__overlay"></div>
+                    <div class="rb-featured-blog__content">
+                        <span class="rb-featured-blog__badge">Featured Blog</span>
+                        <h1 class="rb-featured-blog__title"><?php echo esc_html($featured_post['title']); ?></h1>
+                        <p class="rb-featured-blog__excerpt"><?php echo esc_html($featured_post['excerpt']); ?></p>
+                        <div class="rb-featured-blog__actions">
+                            <a href="<?php echo esc_url($featured_post['link']); ?>" class="rb-featured-blog__btn rb-featured-blog__btn--primary">GET STARTED</a>
+                            <a href="<?php echo esc_url($featured_post['link']); ?>" class="rb-featured-blog__btn rb-featured-blog__btn--icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <?php endif; ?>
             <section id="recent-blogs-module" class="postwrap rb-wrap" data-rb-init="0">
                 <div class="rb-header postlistHead">
                     <div class="rb-header__text comtitlestb plhText">
@@ -101,6 +126,7 @@ if (!class_exists('Recent_Blogs_Module')) {
             $search   = isset($_REQUEST['search']) ? sanitize_text_field($_REQUEST['search']) : '';
             $orderby  = isset($_REQUEST['orderby']) ? sanitize_key($_REQUEST['orderby']) : 'date';
             $order    = isset($_REQUEST['order']) ? strtolower(sanitize_key($_REQUEST['order'])) : 'desc';
+            $exclude  = isset($_REQUEST['exclude_post_id']) ? (int) $_REQUEST['exclude_post_id'] : 0;
 
             if (!in_array($orderby, array('date','title','ID','modified'))) $orderby = 'date';
             if (!in_array($order, array('asc','desc'))) $order = 'desc';
@@ -115,6 +141,11 @@ if (!class_exists('Recent_Blogs_Module')) {
                 's'              => $search,
                 'no_found_rows'  => false,
             );
+            
+            // Exclude featured post from results
+            if ($exclude > 0) {
+                $args['post__not_in'] = array($exclude);
+            }
 
             $q = new WP_Query($args);
 
@@ -132,6 +163,32 @@ if (!class_exists('Recent_Blogs_Module')) {
             wp_send_json($resp);
         }
 
+        private function get_featured_post($post_id = 0) {
+            // If post ID is provided, try to get that specific post
+            if ($post_id > 0) {
+                $post = get_post($post_id);
+                if ($post && $post->post_status === 'publish' && $post->post_type === 'post') {
+                    return $this->serialize_post($post);
+                }
+            }
+            
+            // Otherwise, get the most recent post
+            $args = array(
+                'post_type'      => 'post',
+                'post_status'    => 'publish',
+                'posts_per_page' => 1,
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+            );
+            
+            $query = new WP_Query($args);
+            if ($query->have_posts()) {
+                return $this->serialize_post($query->posts[0]);
+            }
+            
+            return null;
+        }
+
         private function serialize_post($p) {
             $title = get_the_title($p);
             $link  = get_permalink($p);
@@ -147,6 +204,14 @@ if (!class_exists('Recent_Blogs_Module')) {
                     $thumb = $img[0];
                 }
             }
+            
+            // Get excerpt for featured blog
+            $excerpt = '';
+            if (has_excerpt($p)) {
+                $excerpt = get_the_excerpt($p);
+            } else {
+                $excerpt = wp_trim_words(strip_shortcodes($p->post_content), 30, '...');
+            }
 
             return array(
                 'id'         => (int) $p->ID,
@@ -155,12 +220,181 @@ if (!class_exists('Recent_Blogs_Module')) {
                 'date'       => $date,
                 'author'     => $author_name,
                 'featured'   => $thumb ?: 'https://via.placeholder.com/768x432?text=Blog',
+                'excerpt'    => $excerpt,
             );
         }
 
         private function inline_css() {
             return <<<CSS
+/* Featured Blog Section */
+.rb-featured-blog {
+    margin-bottom: 60px;
+}
 
+.rb-featured-blog__hero {
+    position: relative;
+    width: 100%;
+    min-height: 580px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 80px 60px;
+}
+
+.rb-featured-blog__overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 100%);
+    z-index: 1;
+}
+
+.rb-featured-blog__content {
+    position: relative;
+    z-index: 2;
+    max-width: 800px;
+}
+
+.rb-featured-blog__badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 24px;
+}
+
+.rb-featured-blog__title {
+    color: #fff;
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 16px 0;
+}
+
+.rb-featured-blog__excerpt {
+    color: #fff;
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0 0 32px 0;
+    opacity: 0.95;
+}
+
+.rb-featured-blog__actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.rb-featured-blog__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.rb-featured-blog__btn--primary {
+    background: #fff;
+    color: #000;
+    padding: 14px 32px;
+    border-radius: 4px;
+    border: 2px solid #fff;
+}
+
+.rb-featured-blog__btn--primary:hover {
+    background: transparent;
+    color: #fff;
+}
+
+.rb-featured-blog__btn--icon {
+    background: #fff;
+    color: #000;
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    border: 2px solid #fff;
+}
+
+.rb-featured-blog__btn--icon:hover {
+    background: transparent;
+    color: #fff;
+}
+
+.rb-featured-blog__btn--icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .rb-featured-blog__hero {
+        min-height: 480px;
+        padding: 60px 40px;
+    }
+    
+    .rb-featured-blog__title {
+        font-size: 40px;
+    }
+}
+
+@media (max-width: 768px) {
+    .rb-featured-blog {
+        margin-bottom: 40px;
+    }
+    
+    .rb-featured-blog__hero {
+        min-height: 400px;
+        padding: 40px 24px;
+    }
+    
+    .rb-featured-blog__title {
+        font-size: 32px;
+    }
+    
+    .rb-featured-blog__excerpt {
+        font-size: 14px;
+    }
+    
+    .rb-featured-blog__actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .rb-featured-blog__btn--primary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .rb-featured-blog__hero {
+        min-height: 350px;
+        padding: 32px 20px;
+    }
+    
+    .rb-featured-blog__title {
+        font-size: 24px;
+    }
+    
+    .rb-featured-blog__badge {
+        font-size: 12px;
+        padding: 6px 16px;
+    }
+}
 
 CSS;
         }
@@ -287,7 +521,8 @@ CSS;
             per_page: cfg.perPage || 6,
             search: currentSearch,
             orderby: currentOrderby,
-            order: currentOrder
+            order: currentOrder,
+            exclude_post_id: cfg.excludePostId || 0
         });
 
         fetch(cfg.ajaxUrl + '?' + params.toString())
