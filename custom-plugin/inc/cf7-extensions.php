@@ -280,7 +280,7 @@ function custom_cf7ext_css()
 
         // Form 4413: Handle whitepaper PDF download
         document.addEventListener('wpcf7mailsent', function (event) {
-            if (event.detail.contactFormId != 4413) {
+            if (event.detail.contactFormId !== 4413) {
                 return;
             }
 
