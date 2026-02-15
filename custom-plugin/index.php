@@ -285,6 +285,15 @@ function enquemyscripts()
 
 	$post_type = get_post_type($post->ID);
 
+	// Get whitepaper PDF if available (for form 4413)
+	$whitepaper_pdf_url = '';
+	if ($post_type === 'whitepaper' && function_exists('get_field')) {
+		$pdf_field = get_field('pdf', $post->ID);
+		if ($pdf_field && is_array($pdf_field) && isset($pdf_field['url'])) {
+			$whitepaper_pdf_url = $pdf_field['url'];
+		}
+	}
+
 	wp_localize_script(
 		'jquery',
 		'General',
@@ -301,7 +310,9 @@ function enquemyscripts()
 
 			'slug' => $post_slug,
 
-			'ajaxurl' => admin_url('admin-ajax.php')
+			'ajaxurl' => admin_url('admin-ajax.php'),
+
+			'whitepaper_pdf_url' => $whitepaper_pdf_url
 
 		)
 

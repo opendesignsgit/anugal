@@ -161,6 +161,11 @@ function custom_cf7ext_css()
             $('.wpcf7-submit').on('click', function(e) {
                 $(".submittedfromsection").val(makeTitle($(this).parents("form").attr("name")));
             });
+
+            // Form 4413: Populate download_brochure with whitepaper PDF
+            if (General.whitepaper_pdf_url) {
+                $(".download_brochure").val(General.whitepaper_pdf_url);
+            }
         });
 
         document.addEventListener('wpcf7mailsent', function(event) {
@@ -272,6 +277,46 @@ function custom_cf7ext_css()
             link.click();
             document.body.removeChild(link);
         }
+
+        // Form 4413: Handle whitepaper PDF download
+        document.addEventListener('wpcf7mailsent', function (event) {
+            if (event.detail.contactFormId != 4413) {
+                return;
+            }
+
+            var pdfLink = '';
+
+            event.detail.inputs.forEach(function (item) {
+                if (item.name === 'download_brochure') {
+                    pdfLink = item.value;
+                }
+            });
+
+            if (!pdfLink) return;
+
+            // Trigger PDF download
+            var downloadLink = document.createElement('a');
+            downloadLink.href = pdfLink;
+            downloadLink.download = '';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+
+            setTimeout(function () {
+
+                var responseOutput =
+                    event.target.querySelector('.wpcf7-response-output');
+
+                if (!responseOutput) return;
+
+                responseOutput.innerHTML =
+                    'Thank you for your message. It has been sent.<br>' +
+                    '<a href="' + pdfLink + '" target="_blank" download>' +
+                    'Click here to view brochure</a>';
+
+            }, 200);
+
+        });
 
         // function SaveToDisk(fileURL, fileName) {
         // 	if (!window.ActiveXObject) {
