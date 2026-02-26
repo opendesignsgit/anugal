@@ -81,6 +81,15 @@ class Related_Posts_Shortcode {
             'show_author'   => false,
             'show_excerpt'  => true,
         ),
+        'case_study' => array(
+            'label'         => 'Case Studies',
+            'taxonomy'      => 'case_study_category',
+            'placeholder'   => 'https://via.placeholder.com/768x432?text=Case+Study',
+            'cta_text'      => 'Read More',
+            'show_date'     => false,
+            'show_author'   => false,
+            'show_excerpt'  => true,
+        ),
     );
 
     public function __construct() {
@@ -102,7 +111,7 @@ class Related_Posts_Shortcode {
      */
     public function render_shortcode($atts = array()) {
         $atts = shortcode_atts(array(
-            'type'           => 'post',           // post, white_paper, product_tour, news_room, event, webinar, solution_brief
+            'type'           => 'post',           // post, white_paper, product_tour, news_room, event, webinar, solution_brief, case_study
             'count'          => 3,                // Number of posts to show
             'title'          => '',               // Title above the posts (empty = no title)
             'columns'        => 3,                // Number of columns (1, 2, 3, 4)
