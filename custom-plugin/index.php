@@ -311,10 +311,10 @@ function enquemyscripts()
 
 	// Get whitepaper PDF if available (for form 4413)
 	$whitepaper_pdf_url = '';
-	if ($post_type === 'whitepaper' && function_exists('get_field')) {
+	if ($post_type === 'whitepaper' || $post_type === 'case_study' && function_exists('get_field')) {
 		$pdf_field = get_field('pdf', $post->ID);
 		if ($pdf_field && is_array($pdf_field) && isset($pdf_field['url'])) {
-			$whitepaper_pdf_url = $pdf_field['url'];
+			$resource_pdf_url = $pdf_field['url'];
 		}
 	}
 
@@ -336,7 +336,7 @@ function enquemyscripts()
 
 			'ajaxurl' => admin_url('admin-ajax.php'),
 
-			'whitepaper_pdf_url' => $whitepaper_pdf_url
+			'resource_pdf_url' => $resource_pdf_url
 
 		)
 

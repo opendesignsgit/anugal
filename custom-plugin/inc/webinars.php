@@ -80,6 +80,40 @@ function cpt_register_webinar() {
     ));
 }
 
+function sc_webinar_meta_card() {
+
+    if ( !in_array(get_post_type(), ['webinar','event']) ) return '';
+
+
+    $mode = get_field('mode');
+    $date = get_field('date'); // j F, Y
+    $time = get_field('time'); // g:i a
+
+    if(!$date || !$time) return '';
+
+    // Safely parse formatted values
+    $dt = DateTime::createFromFormat('j F, Y g:i a', $date . ' ' . $time);
+
+    if(!$dt) return '';
+
+    $display_date = $dt->format('d M, Y');
+    $display_time = $dt->format('h:i A');
+
+    ob_start(); ?>
+
+    <div class="webinar_event-meta-card">
+        <span class="webinar_event-badge">
+            <?php echo esc_html($mode); ?> /
+            <?php echo esc_html($display_date); ?> at
+            <?php echo esc_html($display_time); ?>
+        </span>
+    </div>
+
+    <?php return ob_get_clean();
+}
+
+add_shortcode('webinar_event_meta', 'sc_webinar_meta_card');
+
 if (!class_exists('Webinars_Module')) {
     class Webinars_Module {
 

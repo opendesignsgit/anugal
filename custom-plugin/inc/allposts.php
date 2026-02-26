@@ -19,7 +19,7 @@ add_shortcode('allposts', 'render_allposts_shortcode');
 
 function render_allposts_shortcode($atts = array()) {
     $atts = shortcode_atts(array(
-        'blogs'         => 3,
+        'blogs'         => 2,
         'product_tours' => 1,
         'white_papers'  => 1,
         'help_center'   => 1,
@@ -98,44 +98,8 @@ function render_allposts_shortcode($atts = array()) {
 
     ob_start();
     ?>
-    <style>
-    /* ---- All Posts – dark card grid ---- */
-    .ap-section{background:#0f1638;padding:48px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-    .ap-row-top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px}
-    .ap-col-big{grid-column:1/2;grid-row:1/3;min-width:0}
-    .ap-row-bottom{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-    @media(max-width:1024px){
-        .ap-row-top{grid-template-columns:1fr 1fr}
-        .ap-col-big{grid-column:1/-1;grid-row:auto}
-        .ap-row-bottom{grid-template-columns:1fr 1fr}
-    }
-    @media(max-width:640px){
-        .ap-row-top{grid-template-columns:1fr}
-        .ap-row-bottom{grid-template-columns:1fr}
-    }
+  
 
-    /* Card base */
-    .ap-card{background:rgba(25,32,72,.85);border:1px solid rgba(100,120,255,.25);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .3s,transform .3s}
-    .ap-card:hover{box-shadow:0 0 24px rgba(80,100,255,.35);transform:translateY(-3px)}
-
-    /* Image */
-    .ap-card__img{display:block;overflow:hidden;border-radius:12px;margin:10px 10px 0}
-    .ap-card__img img{width:100%;height:100%;object-fit:cover;display:block;border-radius:12px}
-    .ap-card--big .ap-card__img{height:100%;min-height:320px}
-    .ap-card--big .ap-card__img img{height:100%}
-    .ap-card--small .ap-card__img{height:180px}
-    .ap-card--regular .ap-card__img{height:200px}
-
-    /* Body */
-    .ap-card__body{padding:16px 18px 20px;flex:1;display:flex;flex-direction:column}
-    .ap-card__title{font-size:17px;font-weight:700;color:#fff;margin:0 0 8px;line-height:1.35}
-    .ap-card--big .ap-card__title{font-size:20px}
-    .ap-card__excerpt{font-size:14px;color:rgba(255,255,255,.7);margin:0 0 14px;line-height:1.55;flex:1}
-    .ap-card__cta{font-size:13px;font-weight:600;color:#7b8cff;text-decoration:none;text-transform:uppercase;letter-spacing:.5px}
-    .ap-card__cta:hover{text-decoration:underline;color:#a3b1ff}
-    </style>
-
-    <section class="ap-section">
         <!-- Row 1: big + 2 small -->
         <div class="ap-row">
             <div class="ap-col-big">
@@ -155,7 +119,6 @@ function render_allposts_shortcode($atts = array()) {
             </div>
         </div>
 
-    </section>
     <?php
     return ob_get_clean();
 }
