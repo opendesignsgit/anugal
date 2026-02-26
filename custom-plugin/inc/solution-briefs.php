@@ -1,6 +1,8 @@
 <?php
 /**
  * Solution Briefs module
+ * - Featured hero banner (most recent solution brief)
+ * - Category chip filters (taxonomy-driven, like product-tour.php)
  * - Search + Sort + Load More
  * - REST by default with admin-ajax fallback
  * - Card grid layout with images, titles, descriptions and "Read More" links
@@ -90,21 +92,25 @@ if (!class_exists('Solution_Briefs_Module')) {
 
         public function shortcode($atts = array()) {
             $atts = shortcode_atts(array(
-                'title'          => 'Recent',
-                'title_accent'   => 'Solution Briefs',
-                'subtitle'       => 'Discover concise overviews of our solutions and how they address your business challenges.',
-                'per_page'       => 6,
-                'excerpt_length' => 120,
-                'category'       => '',
+                'title'            => 'Recent',
+                'title_accent'     => 'Solution Briefs',
+                'subtitle'         => 'Discover concise overviews of our solutions and how they address your business challenges.',
+                'per_page'         => 6,
+                'excerpt_length'   => 120,
+                'category'         => '',
+                'featured_post_id' => 0,
             ), $atts, 'solution_briefs');
 
             // Styles
-            wp_register_style('solution-briefs-inline-style', false, array(), '1.0.0');
+            wp_register_style('solution-briefs-inline-style', false, array(), '1.0.1');
             wp_enqueue_style('solution-briefs-inline-style');
             wp_add_inline_style('solution-briefs-inline-style', $this->inline_css());
 
+            // Get featured post
+            $featured_post = $this->get_featured_post((int) $atts['featured_post_id']);
+
             // Scripts
-            wp_register_script('solution-briefs-inline-script', false, array(), '1.0.0', true);
+            wp_register_script('solution-briefs-inline-script', false, array(), '1.0.1', true);
             wp_enqueue_script('solution-briefs-inline-script');
 
             $data = array(
@@ -114,11 +120,36 @@ if (!class_exists('Solution_Briefs_Module')) {
                 'perPage'       => max(1, (int) $atts['per_page']),
                 'excerptLength' => max(1, (int) $atts['excerpt_length']),
                 'category'      => sanitize_text_field($atts['category']),
+                'excludePostId' => $featured_post ? $featured_post['id'] : 0,
+                'taxRestBase'   => 'solution_brief_category',
             );
             wp_add_inline_script('solution-briefs-inline-script', 'window.SolutionBriefsData = ' . wp_json_encode($data) . ';', 'before');
             wp_add_inline_script('solution-briefs-inline-script', $this->inline_js(), 'after');
 
-            ob_start(); ?>
+            ob_start();
+            if ($featured_post):
+                $bg_url = esc_url($featured_post['featured']);
+                $bg_url = str_replace(array('"', "'", '(', ')'), '', $bg_url);
+            ?>
+            <section class="sb-featured-blog">
+                <div class="sb-featured-blog__hero" style="background-image: url(&quot;<?php echo $bg_url; ?>&quot;);">
+                    <div class="sb-featured-blog__overlay"></div>
+                    <div class="sb-featured-blog__content">
+                        <span class="sb-featured-blog__badge">Featured Solution Brief</span>
+                        <h1 class="sb-featured-blog__title"><?php echo esc_html($featured_post['title']); ?></h1>
+                        <p class="sb-featured-blog__excerpt"><?php echo esc_html($featured_post['excerpt']); ?></p>
+                        <div class="sb-featured-blog__actions">
+                            <a href="<?php echo esc_url($featured_post['link']); ?>" class="sb-featured-blog__btn sb-featured-blog__btn--primary">GET STARTED</a>
+                            <a href="<?php echo esc_url($featured_post['link']); ?>" class="sb-featured-blog__btn sb-featured-blog__btn--icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <?php endif; ?>
             <section id="solution-briefs-module" class="sb-wrap" data-sb-init="0">
                 <div class="sb-header postlistHead">
                     <div class="sb-header__text comtitlestb plhText">
@@ -154,6 +185,10 @@ if (!class_exists('Solution_Briefs_Module')) {
                     </div>
                 </div>
 
+                <div class="sb-chips-wrap">
+                    <div class="sb-chips" id="sb-chips"></div>
+                </div>
+
                 <section id="sb-grid" class="sb-grid" aria-live="polite"></section>
 
                 <div class="sb-loadmore-wrap loadmore-wrap">
@@ -175,6 +210,7 @@ if (!class_exists('Solution_Briefs_Module')) {
             $order          = isset($_REQUEST['order']) ? strtolower(sanitize_key($_REQUEST['order'])) : 'desc';
             $excerpt_length = isset($_REQUEST['excerpt_length']) ? max(1, (int) $_REQUEST['excerpt_length']) : 120;
             $category       = isset($_REQUEST['category']) ? sanitize_text_field($_REQUEST['category']) : '';
+            $exclude        = isset($_REQUEST['exclude_post_id']) ? (int) $_REQUEST['exclude_post_id'] : 0;
 
             if (!in_array($orderby, array('date','title','ID','modified'))) $orderby = 'date';
             if (!in_array($order, array('asc','desc'))) $order = 'desc';
@@ -189,6 +225,10 @@ if (!class_exists('Solution_Briefs_Module')) {
                 's'              => $search,
                 'no_found_rows'  => false,
             );
+
+            if ($exclude > 0) {
+                $args['post__not_in'] = array($exclude);
+            }
 
             // Filter by category if provided
             if (!empty($category)) {
@@ -217,10 +257,40 @@ if (!class_exists('Solution_Briefs_Module')) {
             wp_send_json($resp);
         }
 
+        private function get_featured_post($post_id = 0) {
+            if ($post_id > 0) {
+                $post = get_post($post_id);
+                if ($post && $post->post_status === 'publish' && $post->post_type === 'solution_brief') {
+                    return $this->serialize_post($post, 200);
+                }
+            }
+
+            $args = array(
+                'post_type'      => 'solution_brief',
+                'post_status'    => 'publish',
+                'posts_per_page' => 1,
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+            );
+
+            $query = new WP_Query($args);
+            if ($query->have_posts()) {
+                return $this->serialize_post($query->posts[0], 200);
+            }
+
+            return null;
+        }
+
         private function serialize_post($p, $excerpt_length = 120) {
             $title   = get_the_title($p);
             $link    = get_permalink($p);
-            $excerpt = get_the_excerpt($p);
+
+            $excerpt = '';
+            if (!empty($p->post_excerpt)) {
+                $excerpt = $p->post_excerpt;
+            } else {
+                $excerpt = wp_trim_words(strip_shortcodes($p->post_content), 30, '...');
+            }
 
             if (!empty($excerpt) && mb_strlen($excerpt) > $excerpt_length) {
                 $excerpt = mb_substr($excerpt, 0, $excerpt_length);
@@ -251,7 +321,102 @@ if (!class_exists('Solution_Briefs_Module')) {
 
         private function inline_css() {
             return <<<CSS
-
+/* Featured Solution Brief Section */
+.sb-featured-blog { margin-bottom: 60px; }
+.sb-featured-blog__hero {
+    position: relative;
+    width: 100%;
+    min-height: 580px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 80px 60px;
+}
+.sb-featured-blog__overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+    z-index: 1;
+}
+.sb-featured-blog__content { position: relative; z-index: 2; max-width: 800px; }
+.sb-featured-blog__badge {
+    display: inline-block;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 24px;
+}
+@supports (backdrop-filter: blur(10px)) {
+    .sb-featured-blog__badge { background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); }
+}
+.sb-featured-blog__title { color: #fff; font-size: 48px; font-weight: 700; line-height: 1.2; margin: 0 0 16px 0; }
+.sb-featured-blog__excerpt { color: #fff; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0; opacity: 0.95; }
+.sb-featured-blog__actions { display: flex; gap: 16px; align-items: center; }
+.sb-featured-blog__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.sb-featured-blog__btn--primary {
+    background: #fff; color: #000;
+    padding: 14px 32px; border-radius: 4px; border: 2px solid #fff;
+}
+.sb-featured-blog__btn--primary:hover { background: transparent; color: #fff; }
+.sb-featured-blog__btn--icon {
+    background: #fff; color: #000;
+    width: 48px; height: 48px; border-radius: 4px; border: 2px solid #fff;
+}
+.sb-featured-blog__btn--icon:hover { background: transparent; color: #fff; }
+.sb-featured-blog__btn--icon svg { width: 24px; height: 24px; }
+@media (max-width: 1024px) {
+    .sb-featured-blog__hero { min-height: 480px; padding: 60px 40px; }
+    .sb-featured-blog__title { font-size: 40px; }
+}
+@media (max-width: 768px) {
+    .sb-featured-blog { margin-bottom: 40px; }
+    .sb-featured-blog__hero { min-height: 400px; padding: 40px 24px; }
+    .sb-featured-blog__title { font-size: 32px; }
+    .sb-featured-blog__excerpt { font-size: 14px; }
+    .sb-featured-blog__actions { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .sb-featured-blog__btn--primary { width: 100%; justify-content: center; }
+}
+@media (max-width: 480px) {
+    .sb-featured-blog__hero { min-height: 350px; padding: 32px 20px; }
+    .sb-featured-blog__title { font-size: 24px; }
+    .sb-featured-blog__badge { font-size: 12px; padding: 6px 16px; }
+}
+/* Category Chips */
+.sb-chips-wrap { margin-bottom: 24px; }
+.sb-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.sb-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    background: #fff;
+    color: #444;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.sb-chip:hover { border-color: #000; color: #000; }
+.sb-chip--active { background: #000; color: #fff; border-color: #000; }
+.sb-chip--all.sb-chip--active { background: #000; color: #fff; border-color: #000; }
 .sb-empty{text-align:center;color:#777;grid-column:1 / -1;padding:48px 24px}
 CSS;
         }
@@ -262,6 +427,8 @@ CSS;
     var cfg = window.SolutionBriefsData || {};
     var container = null, page = 1, totalPages = 1, loading = false, initialized = false;
     var currentSearch = '', currentOrderby = 'date', currentOrder = 'desc';
+    var currentCategory = cfg.category || '';
+    var allTerms = [], slugToId = {};
 
     function el(id){ return document.getElementById(id); }
     function qs(sel, ctx){ return (ctx||document).querySelector(sel); }
@@ -273,7 +440,10 @@ CSS;
         if (container.getAttribute('data-sb-init') === '1') return;
         container.setAttribute('data-sb-init', '1');
         bindEvents();
-        fetchPosts(1, true);
+        fetchTerms(function(){
+            renderChips();
+            fetchPosts(1, true);
+        });
         initialized = true;
     }
 
@@ -293,6 +463,53 @@ CSS;
         });
     });
     observer.observe(document.body, { childList: true, subtree: true });
+
+    function fetchTerms(cb) {
+        var restRoot = (cfg.restUrl || '').replace(/\/$/, '');
+        var tax = cfg.taxRestBase || 'solution_brief_category';
+        if (!restRoot) { if (cb) cb(); return; }
+        fetch(restRoot + '/wp/v2/' + tax + '?per_page=100')
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                allTerms = Array.isArray(data) ? data : [];
+                slugToId = {};
+                allTerms.forEach(function(t){ slugToId[t.slug] = t.id; });
+                if (cb) cb();
+            })
+            .catch(function(){ allTerms = []; if (cb) cb(); });
+    }
+
+    function renderChips() {
+        var chipsEl = el('sb-chips');
+        if (!chipsEl) return;
+        chipsEl.innerHTML = '';
+
+        function makeChip(label, slug, isAll) {
+            var btn = document.createElement('button');
+            btn.className = 'sb-chip' + (isAll ? ' sb-chip--all' : '');
+            btn.type = 'button';
+            btn.setAttribute('data-slug', slug);
+            btn.textContent = label;
+            var active = isAll ? (currentCategory === '') : (currentCategory === slug || currentCategory === String(slugToId[slug]));
+            if (active) btn.classList.add('sb-chip--active');
+            btn.addEventListener('click', function(){
+                if (isAll) {
+                    currentCategory = '';
+                } else {
+                    currentCategory = currentCategory === slug ? '' : slug;
+                }
+                renderChips();
+                page = 1;
+                fetchPosts(1, true);
+            });
+            return btn;
+        }
+
+        chipsEl.appendChild(makeChip('ALL', '__all__', true));
+        allTerms.forEach(function(t){
+            chipsEl.appendChild(makeChip(t.name, t.slug, false));
+        });
+    }
 
     function bindEvents(){
         var searchInput = el('sb-search-input');
@@ -373,14 +590,15 @@ CSS;
         }
 
         var params = new URLSearchParams({
-            action:         'solution_briefs_query',
-            page:           pageNum,
-            per_page:       cfg.perPage || 6,
-            excerpt_length: cfg.excerptLength || 120,
-            category:       cfg.category || '',
-            search:         currentSearch,
-            orderby:        currentOrderby,
-            order:          currentOrder
+            action:          'solution_briefs_query',
+            page:            pageNum,
+            per_page:        cfg.perPage || 6,
+            excerpt_length:  cfg.excerptLength || 120,
+            category:        currentCategory,
+            search:          currentSearch,
+            orderby:         currentOrderby,
+            order:           currentOrder,
+            exclude_post_id: cfg.excludePostId || 0
         });
 
         fetch(cfg.ajaxUrl + '?' + params.toString())

@@ -1,6 +1,7 @@
 <?php
 /**
  * Events module
+ * - Featured hero banner (most recent event)
  * - Search + Sort + Load More
  * - REST by default with admin-ajax fallback
  * - Card grid layout with images, titles, descriptions and "Read More" links
@@ -90,21 +91,25 @@ if (!class_exists('Events_Module')) {
 
         public function shortcode($atts = array()) {
             $atts = shortcode_atts(array(
-                'title'          => 'Upcoming',
-                'title_accent'   => 'Events',
-                'subtitle'       => 'Join us at our upcoming events, conferences and meetups to connect and learn.',
-                'per_page'       => 6,
-                'excerpt_length' => 120,
-                'category'       => '',
+                'title'            => 'Upcoming',
+                'title_accent'     => 'Events',
+                'subtitle'         => 'Join us at our upcoming events, conferences and meetups to connect and learn.',
+                'per_page'         => 6,
+                'excerpt_length'   => 120,
+                'category'         => '',
+                'featured_post_id' => 0,
             ), $atts, 'events');
 
             // Styles
-            wp_register_style('events-inline-style', false, array(), '1.0.0');
+            wp_register_style('events-inline-style', false, array(), '1.0.1');
             wp_enqueue_style('events-inline-style');
             wp_add_inline_style('events-inline-style', $this->inline_css());
 
+            // Get featured post
+            $featured_post = $this->get_featured_post((int) $atts['featured_post_id']);
+
             // Scripts
-            wp_register_script('events-inline-script', false, array(), '1.0.0', true);
+            wp_register_script('events-inline-script', false, array(), '1.0.1', true);
             wp_enqueue_script('events-inline-script');
 
             $data = array(
@@ -114,11 +119,35 @@ if (!class_exists('Events_Module')) {
                 'perPage'       => max(1, (int) $atts['per_page']),
                 'excerptLength' => max(1, (int) $atts['excerpt_length']),
                 'category'      => sanitize_text_field($atts['category']),
+                'excludePostId' => $featured_post ? $featured_post['id'] : 0,
             );
             wp_add_inline_script('events-inline-script', 'window.EventsData = ' . wp_json_encode($data) . ';', 'before');
             wp_add_inline_script('events-inline-script', $this->inline_js(), 'after');
 
-            ob_start(); ?>
+            ob_start();
+            if ($featured_post):
+                $bg_url = esc_url($featured_post['featured']);
+                $bg_url = str_replace(array('"', "'", '(', ')'), '', $bg_url);
+            ?>
+            <section class="ev-featured-blog">
+                <div class="ev-featured-blog__hero" style="background-image: url(&quot;<?php echo $bg_url; ?>&quot;);">
+                    <div class="ev-featured-blog__overlay"></div>
+                    <div class="ev-featured-blog__content">
+                        <span class="ev-featured-blog__badge">Featured Event</span>
+                        <h1 class="ev-featured-blog__title"><?php echo esc_html($featured_post['title']); ?></h1>
+                        <p class="ev-featured-blog__excerpt"><?php echo esc_html($featured_post['excerpt']); ?></p>
+                        <div class="ev-featured-blog__actions">
+                            <a href="<?php echo esc_url($featured_post['link']); ?>" class="ev-featured-blog__btn ev-featured-blog__btn--primary">GET STARTED</a>
+                            <a href="<?php echo esc_url($featured_post['link']); ?>" class="ev-featured-blog__btn ev-featured-blog__btn--icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <?php endif; ?>
             <section id="events-module" class="ev-wrap" data-ev-init="0">
                 <div class="ev-header postlistHead">
                     <div class="ev-header__text comtitlestb plhText">
@@ -175,6 +204,7 @@ if (!class_exists('Events_Module')) {
             $order          = isset($_REQUEST['order']) ? strtolower(sanitize_key($_REQUEST['order'])) : 'desc';
             $excerpt_length = isset($_REQUEST['excerpt_length']) ? max(1, (int) $_REQUEST['excerpt_length']) : 120;
             $category       = isset($_REQUEST['category']) ? sanitize_text_field($_REQUEST['category']) : '';
+            $exclude        = isset($_REQUEST['exclude_post_id']) ? (int) $_REQUEST['exclude_post_id'] : 0;
 
             if (!in_array($orderby, array('date','title','ID','modified'))) $orderby = 'date';
             if (!in_array($order, array('asc','desc'))) $order = 'desc';
@@ -189,6 +219,10 @@ if (!class_exists('Events_Module')) {
                 's'              => $search,
                 'no_found_rows'  => false,
             );
+
+            if ($exclude > 0) {
+                $args['post__not_in'] = array($exclude);
+            }
 
             // Filter by category if provided
             if (!empty($category)) {
@@ -217,10 +251,40 @@ if (!class_exists('Events_Module')) {
             wp_send_json($resp);
         }
 
+        private function get_featured_post($post_id = 0) {
+            if ($post_id > 0) {
+                $post = get_post($post_id);
+                if ($post && $post->post_status === 'publish' && $post->post_type === 'event') {
+                    return $this->serialize_post($post, 200);
+                }
+            }
+
+            $args = array(
+                'post_type'      => 'event',
+                'post_status'    => 'publish',
+                'posts_per_page' => 1,
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+            );
+
+            $query = new WP_Query($args);
+            if ($query->have_posts()) {
+                return $this->serialize_post($query->posts[0], 200);
+            }
+
+            return null;
+        }
+
         private function serialize_post($p, $excerpt_length = 120) {
             $title   = get_the_title($p);
             $link    = get_permalink($p);
-            $excerpt = get_the_excerpt($p);
+
+            $excerpt = '';
+            if (!empty($p->post_excerpt)) {
+                $excerpt = $p->post_excerpt;
+            } else {
+                $excerpt = wp_trim_words(strip_shortcodes($p->post_content), 30, '...');
+            }
 
             if (!empty($excerpt) && mb_strlen($excerpt) > $excerpt_length) {
                 $excerpt = mb_substr($excerpt, 0, $excerpt_length);
@@ -251,7 +315,82 @@ if (!class_exists('Events_Module')) {
 
         private function inline_css() {
             return <<<CSS
-
+/* Featured Event Section */
+.ev-featured-blog { margin-bottom: 60px; }
+.ev-featured-blog__hero {
+    position: relative;
+    width: 100%;
+    min-height: 580px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 80px 60px;
+}
+.ev-featured-blog__overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+    z-index: 1;
+}
+.ev-featured-blog__content { position: relative; z-index: 2; max-width: 800px; }
+.ev-featured-blog__badge {
+    display: inline-block;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 24px;
+}
+@supports (backdrop-filter: blur(10px)) {
+    .ev-featured-blog__badge { background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); }
+}
+.ev-featured-blog__title { color: #fff; font-size: 48px; font-weight: 700; line-height: 1.2; margin: 0 0 16px 0; }
+.ev-featured-blog__excerpt { color: #fff; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0; opacity: 0.95; }
+.ev-featured-blog__actions { display: flex; gap: 16px; align-items: center; }
+.ev-featured-blog__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.ev-featured-blog__btn--primary {
+    background: #fff; color: #000;
+    padding: 14px 32px; border-radius: 4px; border: 2px solid #fff;
+}
+.ev-featured-blog__btn--primary:hover { background: transparent; color: #fff; }
+.ev-featured-blog__btn--icon {
+    background: #fff; color: #000;
+    width: 48px; height: 48px; border-radius: 4px; border: 2px solid #fff;
+}
+.ev-featured-blog__btn--icon:hover { background: transparent; color: #fff; }
+.ev-featured-blog__btn--icon svg { width: 24px; height: 24px; }
+@media (max-width: 1024px) {
+    .ev-featured-blog__hero { min-height: 480px; padding: 60px 40px; }
+    .ev-featured-blog__title { font-size: 40px; }
+}
+@media (max-width: 768px) {
+    .ev-featured-blog { margin-bottom: 40px; }
+    .ev-featured-blog__hero { min-height: 400px; padding: 40px 24px; }
+    .ev-featured-blog__title { font-size: 32px; }
+    .ev-featured-blog__excerpt { font-size: 14px; }
+    .ev-featured-blog__actions { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .ev-featured-blog__btn--primary { width: 100%; justify-content: center; }
+}
+@media (max-width: 480px) {
+    .ev-featured-blog__hero { min-height: 350px; padding: 32px 20px; }
+    .ev-featured-blog__title { font-size: 24px; }
+    .ev-featured-blog__badge { font-size: 12px; padding: 6px 16px; }
+}
 .ev-empty{text-align:center;color:#777;grid-column:1 / -1;padding:48px 24px}
 CSS;
         }
@@ -373,14 +512,15 @@ CSS;
         }
 
         var params = new URLSearchParams({
-            action:         'events_query',
-            page:           pageNum,
-            per_page:       cfg.perPage || 6,
-            excerpt_length: cfg.excerptLength || 120,
-            category:       cfg.category || '',
-            search:         currentSearch,
-            orderby:        currentOrderby,
-            order:          currentOrder
+            action:          'events_query',
+            page:            pageNum,
+            per_page:        cfg.perPage || 6,
+            excerpt_length:  cfg.excerptLength || 120,
+            category:        cfg.category || '',
+            search:          currentSearch,
+            orderby:         currentOrderby,
+            order:           currentOrder,
+            exclude_post_id: cfg.excludePostId || 0
         });
 
         fetch(cfg.ajaxUrl + '?' + params.toString())
