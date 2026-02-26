@@ -15,6 +15,7 @@ if (!class_exists('ROI_Submission_CPT')) {
     
     const POST_TYPE = 'roi_submission';
     const OPTION_ADMIN_EMAIL = 'roi_calculator_admin_email';
+    const OPTION_ADMIN_EMAIL_CC = 'roi_calculator_admin_email_cc';
     const NONCE_ACTION = 'roi_submission_nonce';
     
     // Admin Email Frequency Options
@@ -247,11 +248,18 @@ if (!class_exists('ROI_Submission_CPT')) {
      * Register settings
      */
     public function register_settings() {
-      // Admin email setting
+      // Admin email setting (supports comma-separated emails)
       register_setting('roi_calculator_settings', self::OPTION_ADMIN_EMAIL, array(
         'type' => 'string',
-        'sanitize_callback' => 'sanitize_email',
+        'sanitize_callback' => array($this, 'sanitize_comma_separated_emails'),
         'default' => get_option('admin_email'),
+      ));
+      
+      // Admin email CC setting (supports comma-separated emails)
+      register_setting('roi_calculator_settings', self::OPTION_ADMIN_EMAIL_CC, array(
+        'type' => 'string',
+        'sanitize_callback' => array($this, 'sanitize_comma_separated_emails'),
+        'default' => '',
       ));
       
       // Admin email frequency setting
@@ -329,6 +337,30 @@ if (!class_exists('ROI_Submission_CPT')) {
     }
 
     /**
+     * Sanitize comma-separated email addresses
+     */
+    public function sanitize_comma_separated_emails($input) {
+      if (empty($input)) {
+        return '';
+      }
+      
+      // Split by comma and trim whitespace
+      $emails = array_map('trim', explode(',', $input));
+      
+      // Sanitize each email
+      $sanitized_emails = array();
+      foreach ($emails as $email) {
+        $sanitized_email = sanitize_email($email);
+        if (!empty($sanitized_email) && is_email($sanitized_email)) {
+          $sanitized_emails[] = $sanitized_email;
+        }
+      }
+      
+      // Join back with comma and space
+      return implode(', ', $sanitized_emails);
+    }
+
+    /**
      * Render settings page
      */
     public function render_settings_page() {
@@ -354,12 +386,21 @@ if (!class_exists('ROI_Submission_CPT')) {
           <h2>Notification Settings</h2>
           <table class="form-table">
             <tr>
-              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL); ?>">Admin Notification Email</label></th>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL); ?>">Admin Notification Email(s)</label></th>
               <td>
-                <input type="email" id="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL); ?>" name="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL); ?>" 
+                <input type="text" id="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL); ?>" name="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL); ?>" 
                        value="<?php echo esc_attr(get_option(self::OPTION_ADMIN_EMAIL, get_option('admin_email'))); ?>" 
                        class="regular-text">
-                <p class="description">Email address to receive ROI calculation submissions. Defaults to the WordPress admin email.</p>
+                <p class="description">Email address(es) to receive ROI calculation submissions. Use comma to separate multiple emails (e.g., admin1@example.com, admin2@example.com). Defaults to the WordPress admin email.</p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL_CC); ?>">CC Email(s)</label></th>
+              <td>
+                <input type="text" id="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL_CC); ?>" name="<?php echo esc_attr(self::OPTION_ADMIN_EMAIL_CC); ?>" 
+                       value="<?php echo esc_attr(get_option(self::OPTION_ADMIN_EMAIL_CC, '')); ?>" 
+                       class="regular-text">
+                <p class="description">Optional CC email address(es). Use comma to separate multiple emails (e.g., cc1@example.com, cc2@example.com).</p>
               </td>
             </tr>
             <tr>
@@ -816,9 +857,10 @@ if (!class_exists('ROI_Submission_CPT')) {
      * Send email to admin
      */
     private function send_admin_email($data, $results) {
-      $admin_email = get_option(self::OPTION_ADMIN_EMAIL, get_option('admin_email'));
+      $admin_emails = get_option(self::OPTION_ADMIN_EMAIL, get_option('admin_email'));
+      $cc_emails = get_option(self::OPTION_ADMIN_EMAIL_CC, '');
       
-      if (empty($admin_email)) {
+      if (empty($admin_emails)) {
         return;
       }
       
@@ -828,7 +870,18 @@ if (!class_exists('ROI_Submission_CPT')) {
       
       $headers = array('Content-Type: text/html; charset=UTF-8');
       
-      wp_mail($admin_email, $subject, $message, $headers);
+      // Add CC headers if CC emails are set
+      if (!empty($cc_emails)) {
+        $cc_array = array_map('trim', explode(',', $cc_emails));
+        foreach ($cc_array as $cc_email) {
+          if (!empty($cc_email) && is_email($cc_email)) {
+            $headers[] = 'Cc: ' . $cc_email;
+          }
+        }
+      }
+      
+      // Send to all admin emails (comma-separated list is supported by wp_mail)
+      wp_mail($admin_emails, $subject, $message, $headers);
     }
 
     /**
