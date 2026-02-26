@@ -429,6 +429,7 @@ CSS;
     var currentSearch = '', currentOrderby = 'date', currentOrder = 'desc';
     var currentCategory = cfg.category || '';
     var allTerms = [], slugToId = {};
+    var _fetchController = null;
 
     function el(id){ return document.getElementById(id); }
     function qs(sel, ctx){ return (ctx||document).querySelector(sel); }
@@ -498,6 +499,9 @@ CSS;
                 } else {
                     currentCategory = currentCategory === slug ? '' : slug;
                 }
+                // Sync any typed-but-not-yet-submitted search text
+                var searchInput = el('sb-search-input');
+                if (searchInput) currentSearch = searchInput.value.trim();
                 renderChips();
                 page = 1;
                 fetchPosts(1, true);
@@ -575,11 +579,20 @@ CSS;
     function doSearch(){
         var searchInput = el('sb-search-input');
         currentSearch = searchInput ? searchInput.value.trim() : '';
+        page = 1;
         fetchPosts(1, true);
     }
 
     function fetchPosts(pageNum, replace){
-        if (loading) return;
+        // Only block "Load More" appends when a request is in flight;
+        // always allow replace=true (new search / chip filter) to proceed.
+        if (!replace && loading) return;
+
+        // Cancel any previous replace request to avoid stale overwrites.
+        if (replace && _fetchController) {
+            _fetchController.abort();
+        }
+        _fetchController = window.AbortController ? new window.AbortController() : null;
         loading = true;
 
         var grid        = el('sb-grid');
@@ -601,9 +614,12 @@ CSS;
             exclude_post_id: cfg.excludePostId || 0
         });
 
-        fetch(cfg.ajaxUrl + '?' + params.toString())
+        var fetchOptions = _fetchController ? { signal: _fetchController.signal } : {};
+
+        fetch(cfg.ajaxUrl + '?' + params.toString(), fetchOptions)
             .then(function(r){ return r.json(); })
             .then(function(data){
+                _fetchController = null;
                 page       = data.page || 1;
                 totalPages = data.totalPages || 1;
 
@@ -620,7 +636,9 @@ CSS;
                 loadMoreBtn.disabled = page >= totalPages;
                 loading = false;
             })
-            .catch(function(){
+            .catch(function(err){
+                if (err && err.name === 'AbortError') return;
+                _fetchController = null;
                 loading = false;
                 if (replace) grid.innerHTML = '<p class="sb-empty">Error loading solution briefs.</p>';
             });

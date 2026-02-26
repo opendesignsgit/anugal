@@ -54,6 +54,33 @@ class Related_Posts_Shortcode {
             'show_author'   => false,
             'show_excerpt'  => true,
         ),
+        'event' => array(
+            'label'         => 'Events',
+            'taxonomy'      => 'event_category',
+            'placeholder'   => 'https://via.placeholder.com/768x432?text=Event',
+            'cta_text'      => 'Read More',
+            'show_date'     => true,
+            'show_author'   => false,
+            'show_excerpt'  => true,
+        ),
+        'webinar' => array(
+            'label'         => 'Webinars',
+            'taxonomy'      => 'webinar_category',
+            'placeholder'   => 'https://via.placeholder.com/768x432?text=Webinar',
+            'cta_text'      => 'Read More',
+            'show_date'     => false,
+            'show_author'   => false,
+            'show_excerpt'  => true,
+        ),
+        'solution_brief' => array(
+            'label'         => 'Solution Briefs',
+            'taxonomy'      => 'solution_brief_category',
+            'placeholder'   => 'https://via.placeholder.com/768x432?text=Solution+Brief',
+            'cta_text'      => 'Read More',
+            'show_date'     => false,
+            'show_author'   => false,
+            'show_excerpt'  => true,
+        ),
     );
 
     public function __construct() {
@@ -75,7 +102,7 @@ class Related_Posts_Shortcode {
      */
     public function render_shortcode($atts = array()) {
         $atts = shortcode_atts(array(
-            'type'           => 'post',           // post, white_paper, product_tour, news_room
+            'type'           => 'post',           // post, white_paper, product_tour, news_room, event, webinar, solution_brief
             'count'          => 3,                // Number of posts to show
             'title'          => '',               // Title above the posts (empty = no title)
             'columns'        => 3,                // Number of columns (1, 2, 3, 4)
