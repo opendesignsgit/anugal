@@ -166,6 +166,30 @@ include(plugin_dir_path(__FILE__) . '/inc/white-paper.php');
 
 /** White Paper **/
 
+/** Case Studies **/
+
+include(plugin_dir_path(__FILE__) . '/inc/case-studies.php');
+
+/** Case Studies **/
+
+/** Events **/
+
+include(plugin_dir_path(__FILE__) . '/inc/events.php');
+
+/** Events **/
+
+/** Webinars **/
+
+include(plugin_dir_path(__FILE__) . '/inc/webinars.php');
+
+/** Webinars **/
+
+/** Solution Briefs **/
+
+include(plugin_dir_path(__FILE__) . '/inc/solution-briefs.php');
+
+/** Solution Briefs **/
+
 /** All Posts **/
 
 include(plugin_dir_path(__FILE__) . '/inc/allposts.php');
@@ -287,10 +311,10 @@ function enquemyscripts()
 
 	// Get whitepaper PDF if available (for form 4413)
 	$whitepaper_pdf_url = '';
-	if ($post_type === 'whitepaper' && function_exists('get_field')) {
+	if ($post_type === 'whitepaper' || $post_type === 'case_study' && function_exists('get_field')) {
 		$pdf_field = get_field('pdf', $post->ID);
 		if ($pdf_field && is_array($pdf_field) && isset($pdf_field['url'])) {
-			$whitepaper_pdf_url = $pdf_field['url'];
+			$resource_pdf_url = $pdf_field['url'];
 		}
 	}
 
@@ -312,7 +336,7 @@ function enquemyscripts()
 
 			'ajaxurl' => admin_url('admin-ajax.php'),
 
-			'whitepaper_pdf_url' => $whitepaper_pdf_url
+			'resource_pdf_url' => $resource_pdf_url
 
 		)
 

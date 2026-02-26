@@ -1,0 +1,572 @@
+<?php
+/**
+ * Events module
+ * - Featured hero banner (most recent event)
+ * - Search + Sort + Load More
+ * - REST by default with admin-ajax fallback
+ * - Card grid layout with images, titles, descriptions and "Read More" links
+ */
+
+if (!defined('ABSPATH')) exit;
+if (defined('EVENTS_INC_LOADED')) return;
+define('EVENTS_INC_LOADED', true);
+
+// Register Custom Post Type
+add_action('init', 'cpt_register_event');
+function cpt_register_event() {
+    $labels = array(
+        'name'               => __('Events', 'custom-post-type-ui'),
+        'singular_name'      => __('Event', 'custom-post-type-ui'),
+        'menu_name'          => __('Events', 'custom-post-type-ui'),
+        'add_new'            => __('Add New', 'custom-post-type-ui'),
+        'add_new_item'       => __('Add New Event', 'custom-post-type-ui'),
+        'edit_item'          => __('Edit Event', 'custom-post-type-ui'),
+        'new_item'           => __('New Event', 'custom-post-type-ui'),
+        'view_item'          => __('View Event', 'custom-post-type-ui'),
+        'search_items'       => __('Search Events', 'custom-post-type-ui'),
+        'not_found'          => __('No Events found', 'custom-post-type-ui'),
+        'not_found_in_trash' => __('No Events found in Trash', 'custom-post-type-ui'),
+    );
+
+    $args = array(
+        'label'               => __('Events', 'custom-post-type-ui'),
+        'labels'              => $labels,
+        'menu_icon'           => 'dashicons-calendar-alt',
+        'description'         => 'Events and conferences',
+        'public'              => true,
+        'publicly_queryable'  => true,
+        'show_ui'             => true,
+        'show_in_rest'        => true,
+        'rest_base'           => 'events',
+        'rest_controller_class' => 'WP_REST_Posts_Controller',
+        'has_archive'         => false,
+        'show_in_menu'        => true,
+        'show_in_nav_menus'   => true,
+        'delete_with_user'    => false,
+        'exclude_from_search' => false,
+        'capability_type'     => 'post',
+        'map_meta_cap'        => true,
+        'hierarchical'        => false,
+        'rewrite'             => array('slug' => 'event', 'with_front' => true),
+        'query_var'           => true,
+        'supports'            => array('title', 'editor', 'thumbnail', 'excerpt', 'custom-fields'),
+        'show_in_graphql'     => false,
+    );
+
+    register_post_type('event', $args);
+
+    // Register taxonomy for categories
+    register_taxonomy('event_category', 'event', array(
+        'hierarchical' => true,
+        'labels' => array(
+            'name'              => _x('Categories', 'taxonomy general name'),
+            'singular_name'     => _x('Category', 'taxonomy singular name'),
+            'search_items'      => __('Search Categories'),
+            'all_items'         => __('All Categories'),
+            'parent_item'       => __('Parent Category'),
+            'parent_item_colon' => __('Parent Category:'),
+            'edit_item'         => __('Edit Category'),
+            'update_item'       => __('Update Category'),
+            'add_new_item'      => __('Add New Category'),
+            'new_item_name'     => __('New Category Name'),
+            'menu_name'         => __('Categories'),
+        ),
+        'show_in_rest' => true,
+        'rewrite' => array(
+            'slug' => 'event-category',
+            'with_front' => false,
+            'hierarchical' => true
+        ),
+    ));
+}
+
+if (!class_exists('Events_Module')) {
+    class Events_Module {
+
+        public function __construct() {
+            add_shortcode('events', array($this, 'shortcode'));
+            add_action('wp_ajax_events_query', array($this, 'ajax_query'));
+            add_action('wp_ajax_nopriv_events_query', array($this, 'ajax_query'));
+        }
+
+        public function shortcode($atts = array()) {
+            $atts = shortcode_atts(array(
+                'title'            => 'Upcoming',
+                'title_accent'     => 'Events',
+                'subtitle'         => 'Join us at our upcoming events, conferences and meetups to connect and learn.',
+                'per_page'         => 6,
+                'excerpt_length'   => 120,
+                'category'         => '',
+                'featured_post_id' => 0,
+            ), $atts, 'events');
+
+            // Styles
+            wp_register_style('events-inline-style', false, array(), '1.0.1');
+            wp_enqueue_style('events-inline-style');
+            wp_add_inline_style('events-inline-style', $this->inline_css());
+
+            // Get featured post
+            $featured_post = $this->get_featured_post((int) $atts['featured_post_id']);
+
+            // Scripts
+            wp_register_script('events-inline-script', false, array(), '1.0.1', true);
+            wp_enqueue_script('events-inline-script');
+
+            $data = array(
+                'restUrl'       => esc_url_raw(get_rest_url()),
+                'siteUrl'       => home_url(),
+                'ajaxUrl'       => admin_url('admin-ajax.php'),
+                'perPage'       => max(1, (int) $atts['per_page']),
+                'excerptLength' => max(1, (int) $atts['excerpt_length']),
+                'category'      => sanitize_text_field($atts['category']),
+                'excludePostId' => $featured_post ? $featured_post['id'] : 0,
+            );
+            wp_add_inline_script('events-inline-script', 'window.EventsData = ' . wp_json_encode($data) . ';', 'before');
+            wp_add_inline_script('events-inline-script', $this->inline_js(), 'after');
+
+            ob_start();
+            if ($featured_post):
+                $bg_url = esc_url($featured_post['featured']);
+                $bg_url = str_replace(array('"', "'", '(', ')'), '', $bg_url);
+            ?>
+            <section class="ev-featured-blog">
+                <div class="ev-featured-blog__hero" style="background-image: url(&quot;<?php echo $bg_url; ?>&quot;);">
+                    <div class="ev-featured-blog__overlay"></div>
+                    <div class="ev-featured-blog__content">
+                        <span class="ev-featured-blog__badge">Featured Event</span>
+                        <h1 class="ev-featured-blog__title"><?php echo esc_html($featured_post['title']); ?></h1>
+                        <p class="ev-featured-blog__excerpt"><?php echo esc_html($featured_post['excerpt']); ?></p>
+                        <div class="ev-featured-blog__actions">
+                            <a href="<?php echo esc_url($featured_post['link']); ?>" class="ev-featured-blog__btn ev-featured-blog__btn--primary">GET STARTED</a>
+                            <a href="<?php echo esc_url($featured_post['link']); ?>" class="ev-featured-blog__btn ev-featured-blog__btn--icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <?php endif; ?>
+            <section id="events-module" class="ev-wrap" data-ev-init="0">
+                <div class="ev-header postlistHead">
+                    <div class="ev-header__text comtitlestb plhText">
+                        <h2 class="ev-title plhTitle">
+                            <span class="ev-title__first plhTitleFirst"><?php echo esc_html($atts['title']); ?></span>
+                            <span class="ev-title__accent plhTitleAccent"><?php echo esc_html($atts['title_accent']); ?></span>
+                        </h2>
+                        <p class="ev-subtitle plhsubTitle"><?php echo esc_html($atts['subtitle']); ?></p>
+                    </div>
+                    <div class="ev-header__tools plhTools">
+                        <div class="ev-searchbar plhSearchbar">
+                            <div class="plhinSearwrap">
+                                <svg class="ev-search-icon plhsearchicon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <path d="m21 21-4.35-4.35"></path>
+                                </svg>
+                                <div class="ev-input-wrap plhinputwrap">
+                                    <input type="text" id="ev-search-input" class="plhsearchbar__input" placeholder="Search by Keyword" aria-label="Search by Keyword">
+                                    <button id="ev-clear-btn" class="ev-clear-btn plhclearbtn" type="button" title="Clear search" aria-label="Clear search">×</button>
+                                </div>
+                                <button id="ev-search-btn" class="ev-searchbar__btn plhSearchbarbtn" type="button">SEARCH</button>
+                            </div>
+                            <button id="ev-sort-toggle" class="ev-searchbar__filter plhfilterbtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="ev-sort-menu" title="Sort">
+                                <img src="https://dev.opendesignsin.com/anugal-wp/wp-content/uploads/2026/02/FunnelSimple.png" alt=""/>
+                            </button>
+                            <div id="ev-sort-menu" class="ev-sort-menu plhsortmenu" role="menu" aria-hidden="true">
+                                <button class="ev-sort-menu__item" data-orderby="date" data-order="desc" role="menuitem" type="button">Newest</button>
+                                <button class="ev-sort-menu__item" data-orderby="date" data-order="asc" role="menuitem" type="button">Oldest</button>
+                                <button class="ev-sort-menu__item" data-orderby="title" data-order="asc" role="menuitem" type="button">Title A–Z</button>
+                                <button class="ev-sort-menu__item" data-orderby="title" data-order="desc" role="menuitem" type="button">Title Z–A</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <section id="ev-grid" class="ev-grid" aria-live="polite"></section>
+
+                <div class="ev-loadmore-wrap loadmore-wrap">
+                    <button id="ev-loadmore" class="ev-loadmore loadmore" disabled type="button">
+                        <span>Load More</span>
+                        <span class="ev-loadmore__arrow loadmore__arrow"><img src="https://dev.opendesignsin.com/anugal-wp/wp-content/uploads/2026/01/emore-arrow-img1.png" alt=""/></span>
+                    </button>
+                </div>
+            </section>
+            <?php
+            return ob_get_clean();
+        }
+
+        public function ajax_query() {
+            $per_page       = isset($_REQUEST['per_page']) ? max(1, (int) $_REQUEST['per_page']) : 6;
+            $page           = isset($_REQUEST['page']) ? max(1, (int) $_REQUEST['page']) : 1;
+            $search         = isset($_REQUEST['search']) ? sanitize_text_field($_REQUEST['search']) : '';
+            $orderby        = isset($_REQUEST['orderby']) ? sanitize_key($_REQUEST['orderby']) : 'date';
+            $order          = isset($_REQUEST['order']) ? strtolower(sanitize_key($_REQUEST['order'])) : 'desc';
+            $excerpt_length = isset($_REQUEST['excerpt_length']) ? max(1, (int) $_REQUEST['excerpt_length']) : 120;
+            $category       = isset($_REQUEST['category']) ? sanitize_text_field($_REQUEST['category']) : '';
+            $exclude        = isset($_REQUEST['exclude_post_id']) ? (int) $_REQUEST['exclude_post_id'] : 0;
+
+            if (!in_array($orderby, array('date','title','ID','modified'))) $orderby = 'date';
+            if (!in_array($order, array('asc','desc'))) $order = 'desc';
+
+            $args = array(
+                'post_type'      => 'event',
+                'post_status'    => 'publish',
+                'posts_per_page' => $per_page,
+                'paged'          => $page,
+                'orderby'        => $orderby,
+                'order'          => $order,
+                's'              => $search,
+                'no_found_rows'  => false,
+            );
+
+            if ($exclude > 0) {
+                $args['post__not_in'] = array($exclude);
+            }
+
+            // Filter by category if provided
+            if (!empty($category)) {
+                $args['tax_query'] = array(
+                    array(
+                        'taxonomy' => 'event_category',
+                        'field'    => is_numeric($category) ? 'term_id' : 'slug',
+                        'terms'    => $category,
+                    ),
+                );
+            }
+
+            $q = new WP_Query($args);
+
+            $items = array();
+            foreach ($q->posts as $p) {
+                $items[] = $this->serialize_post($p, $excerpt_length);
+            }
+
+            $resp = array(
+                'posts'      => $items,
+                'totalPages' => (int) $q->max_num_pages,
+                'page'       => (int) $page,
+            );
+
+            wp_send_json($resp);
+        }
+
+        private function get_featured_post($post_id = 0) {
+            if ($post_id > 0) {
+                $post = get_post($post_id);
+                if ($post && $post->post_status === 'publish' && $post->post_type === 'event') {
+                    return $this->serialize_post($post, 200);
+                }
+            }
+
+            $args = array(
+                'post_type'      => 'event',
+                'post_status'    => 'publish',
+                'posts_per_page' => 1,
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+            );
+
+            $query = new WP_Query($args);
+            if ($query->have_posts()) {
+                return $this->serialize_post($query->posts[0], 200);
+            }
+
+            return null;
+        }
+
+        private function serialize_post($p, $excerpt_length = 120) {
+            $title   = get_the_title($p);
+            $link    = get_permalink($p);
+
+            $excerpt = '';
+            if (!empty($p->post_excerpt)) {
+                $excerpt = $p->post_excerpt;
+            } else {
+                $excerpt = wp_trim_words(strip_shortcodes($p->post_content), 30, '...');
+            }
+
+            if (!empty($excerpt) && mb_strlen($excerpt) > $excerpt_length) {
+                $excerpt = mb_substr($excerpt, 0, $excerpt_length);
+                $last_space = mb_strrpos($excerpt, ' ');
+                if ($last_space !== false && $last_space > mb_strlen($excerpt) * 0.8) {
+                    $excerpt = mb_substr($excerpt, 0, $last_space);
+                }
+                $excerpt = rtrim($excerpt, '.,!? ') . '...';
+            }
+
+            $thumb    = '';
+            $thumb_id = get_post_thumbnail_id($p);
+            if ($thumb_id) {
+                $img = wp_get_attachment_image_src($thumb_id, 'large');
+                if ($img && is_array($img)) {
+                    $thumb = $img[0];
+                }
+            }
+
+            return array(
+                'id'       => (int) $p->ID,
+                'title'    => $title,
+                'link'     => $link,
+                'excerpt'  => $excerpt ?: '',
+                'featured' => $thumb ?: 'https://via.placeholder.com/768x432?text=Event',
+            );
+        }
+
+        private function inline_css() {
+            return <<<CSS
+/* Featured Event Section */
+.ev-featured-blog { margin-bottom: 60px; }
+.ev-featured-blog__hero {
+    position: relative;
+    width: 100%;
+    min-height: 580px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 80px 60px;
+}
+.ev-featured-blog__overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+    z-index: 1;
+}
+.ev-featured-blog__content { position: relative; z-index: 2; max-width: 800px; }
+.ev-featured-blog__badge {
+    display: inline-block;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 24px;
+}
+@supports (backdrop-filter: blur(10px)) {
+    .ev-featured-blog__badge { background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); }
+}
+.ev-featured-blog__title { color: #fff; font-size: 48px; font-weight: 700; line-height: 1.2; margin: 0 0 16px 0; }
+.ev-featured-blog__excerpt { color: #fff; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0; opacity: 0.95; }
+.ev-featured-blog__actions { display: flex; gap: 16px; align-items: center; }
+.ev-featured-blog__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.ev-featured-blog__btn--primary {
+    background: #fff; color: #000;
+    padding: 14px 32px; border-radius: 4px; border: 2px solid #fff;
+}
+.ev-featured-blog__btn--primary:hover { background: transparent; color: #fff; }
+.ev-featured-blog__btn--icon {
+    background: #fff; color: #000;
+    width: 48px; height: 48px; border-radius: 4px; border: 2px solid #fff;
+}
+.ev-featured-blog__btn--icon:hover { background: transparent; color: #fff; }
+.ev-featured-blog__btn--icon svg { width: 24px; height: 24px; }
+@media (max-width: 1024px) {
+    .ev-featured-blog__hero { min-height: 480px; padding: 60px 40px; }
+    .ev-featured-blog__title { font-size: 40px; }
+}
+@media (max-width: 768px) {
+    .ev-featured-blog { margin-bottom: 40px; }
+    .ev-featured-blog__hero { min-height: 400px; padding: 40px 24px; }
+    .ev-featured-blog__title { font-size: 32px; }
+    .ev-featured-blog__excerpt { font-size: 14px; }
+    .ev-featured-blog__actions { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .ev-featured-blog__btn--primary { width: 100%; justify-content: center; }
+}
+@media (max-width: 480px) {
+    .ev-featured-blog__hero { min-height: 350px; padding: 32px 20px; }
+    .ev-featured-blog__title { font-size: 24px; }
+    .ev-featured-blog__badge { font-size: 12px; padding: 6px 16px; }
+}
+.ev-empty{text-align:center;color:#777;grid-column:1 / -1;padding:48px 24px}
+CSS;
+        }
+
+        private function inline_js() {
+            return <<<'JS'
+(function(){
+    var cfg = window.EventsData || {};
+    var container = null, page = 1, totalPages = 1, loading = false, initialized = false;
+    var currentSearch = '', currentOrderby = 'date', currentOrder = 'desc';
+
+    function el(id){ return document.getElementById(id); }
+    function qs(sel, ctx){ return (ctx||document).querySelector(sel); }
+    function qsa(sel, ctx){ return (ctx||document).querySelectorAll(sel); }
+
+    function tryInit(){
+        container = document.getElementById('events-module');
+        if (!container || initialized) return;
+        if (container.getAttribute('data-ev-init') === '1') return;
+        container.setAttribute('data-ev-init', '1');
+        bindEvents();
+        fetchPosts(1, true);
+        initialized = true;
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tryInit);
+    } else {
+        tryInit();
+    }
+
+    var observer = new MutationObserver(function(mutations){
+        mutations.forEach(function(m){
+            m.addedNodes.forEach(function(n){
+                if (n.nodeType === 1 && (n.id === 'events-module' || n.querySelector && n.querySelector('#events-module'))) {
+                    tryInit();
+                }
+            });
+        });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    function bindEvents(){
+        var searchInput = el('ev-search-input');
+        var clearBtn    = el('ev-clear-btn');
+        var searchBtn   = el('ev-search-btn');
+        var sortToggle  = el('ev-sort-toggle');
+        var sortMenu    = el('ev-sort-menu');
+        var loadMoreBtn = el('ev-loadmore');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function(){
+                clearBtn.style.display = this.value ? 'block' : 'none';
+            });
+            searchInput.addEventListener('keypress', function(e){
+                if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function(){
+                searchInput.value = '';
+                clearBtn.style.display = 'none';
+                currentSearch = '';
+                fetchPosts(1, true);
+            });
+        }
+
+        if (searchBtn) {
+            searchBtn.addEventListener('click', doSearch);
+        }
+
+        if (sortToggle && sortMenu) {
+            sortToggle.addEventListener('click', function(e){
+                e.stopPropagation();
+                var expanded = sortMenu.getAttribute('aria-hidden') === 'false';
+                sortMenu.setAttribute('aria-hidden', expanded ? 'true' : 'false');
+                sortToggle.setAttribute('aria-expanded', !expanded);
+            });
+
+            qsa('.ev-sort-menu__item', sortMenu).forEach(function(item){
+                item.addEventListener('click', function(){
+                    currentOrderby = this.dataset.orderby;
+                    currentOrder   = this.dataset.order;
+                    sortMenu.setAttribute('aria-hidden', 'true');
+                    fetchPosts(1, true);
+                });
+            });
+
+            document.addEventListener('click', function(){
+                sortMenu.setAttribute('aria-hidden', 'true');
+            });
+        }
+
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', function(){
+                if (page < totalPages && !loading) {
+                    fetchPosts(page + 1, false);
+                }
+            });
+        }
+    }
+
+    function doSearch(){
+        var searchInput = el('ev-search-input');
+        currentSearch = searchInput ? searchInput.value.trim() : '';
+        fetchPosts(1, true);
+    }
+
+    function fetchPosts(pageNum, replace){
+        if (loading) return;
+        loading = true;
+
+        var grid        = el('ev-grid');
+        var loadMoreBtn = el('ev-loadmore');
+
+        if (replace) {
+            grid.innerHTML = '<div class="ev-card--skeleton"></div><div class="ev-card--skeleton"></div><div class="ev-card--skeleton"></div>';
+        }
+
+        var params = new URLSearchParams({
+            action:          'events_query',
+            page:            pageNum,
+            per_page:        cfg.perPage || 6,
+            excerpt_length:  cfg.excerptLength || 120,
+            category:        cfg.category || '',
+            search:          currentSearch,
+            orderby:         currentOrderby,
+            order:           currentOrder,
+            exclude_post_id: cfg.excludePostId || 0
+        });
+
+        fetch(cfg.ajaxUrl + '?' + params.toString())
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                page       = data.page || 1;
+                totalPages = data.totalPages || 1;
+
+                if (replace) grid.innerHTML = '';
+
+                if (data.posts && data.posts.length) {
+                    data.posts.forEach(function(post){
+                        grid.insertAdjacentHTML('beforeend', renderCard(post));
+                    });
+                } else if (replace) {
+                    grid.innerHTML = '<p class="ev-empty">No events found.</p>';
+                }
+
+                loadMoreBtn.disabled = page >= totalPages;
+                loading = false;
+            })
+            .catch(function(){
+                loading = false;
+                if (replace) grid.innerHTML = '<p class="ev-empty">Error loading events.</p>';
+            });
+    }
+
+    function renderCard(post){
+        return '<article class="ev-card">' +
+            '<a href="'+escHtml(post.link)+'" class="ev-card__image"><img src="'+escHtml(post.featured)+'" alt="'+escHtml(post.title)+'"></a>' +
+            '<div class="ev-card__body">' +
+                '<h3 class="ev-card__title">'+escHtml(post.title)+'</h3>' +
+                '<p class="ev-card__desc">'+escHtml(post.excerpt)+'</p>' +
+                '<a href="'+escHtml(post.link)+'" class="ev-card__cta">Read More</a>' +
+            '</div>' +
+        '</article>';
+    }
+
+    function escHtml(str){
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+})();
+JS;
+        }
+    }
+
+    new Events_Module();
+}

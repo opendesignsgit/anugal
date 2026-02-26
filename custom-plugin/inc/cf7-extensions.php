@@ -163,8 +163,8 @@ function custom_cf7ext_css()
             });
 
             // Form 4413: Populate download_brochure with whitepaper PDF
-            if (General.whitepaper_pdf_url) {
-                $(".download_brochure").val(General.whitepaper_pdf_url);
+            if (General.resource_pdf_url) {
+                $(".download_brochure").val(General.resource_pdf_url);
             }
         });
 
@@ -251,7 +251,7 @@ function custom_cf7ext_css()
                     //                 }
                     //             });
                 } else {
-                    window.location.href = General.site_url + '/thank-you';
+                    // window.location.href = General.site_url + '/thank-you';
                 }
             }
         });
