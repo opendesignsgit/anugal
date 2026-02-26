@@ -166,6 +166,30 @@ include(plugin_dir_path(__FILE__) . '/inc/white-paper.php');
 
 /** White Paper **/
 
+/** Case Studies **/
+
+include(plugin_dir_path(__FILE__) . '/inc/case-studies.php');
+
+/** Case Studies **/
+
+/** Events **/
+
+include(plugin_dir_path(__FILE__) . '/inc/events.php');
+
+/** Events **/
+
+/** Webinars **/
+
+include(plugin_dir_path(__FILE__) . '/inc/webinars.php');
+
+/** Webinars **/
+
+/** Solution Briefs **/
+
+include(plugin_dir_path(__FILE__) . '/inc/solution-briefs.php');
+
+/** Solution Briefs **/
+
 /** All Posts **/
 
 include(plugin_dir_path(__FILE__) . '/inc/allposts.php');
