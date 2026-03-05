@@ -763,14 +763,14 @@ if (!class_exists('Help_Center_Categories_Module')) {
             if (self::$search_rendered) return;
             self::$search_rendered = true;
             ?>
-            <div class="hcc-search-bar-wrap">
-                <div class="hcc-search-bar">
-                    <svg class="hcc-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <div class="hcc-search-bar-wrap plhSearchbar marbtmfz">
+                <div class="hcc-search-bar plhinSearwrap">
+                    <svg class="hcc-search-icon plhsearchicon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"></circle>
                         <path d="m21 21-4.35-4.35"></path>
                     </svg>
-                    <div class="hcc-search-input-wrap">
-                        <input type="text" id="hcc-search-input" class="hcc-search-input"
+                    <div class="hcc-search-input-wrap plhinputwrap">
+                        <input type="text" id="hcc-search-input" class="hcc-search-input plhsearchbar__input"
                                placeholder="Search by Keyword"
                                aria-label="Search help articles"
                                autocomplete="off" role="combobox"
@@ -779,16 +779,14 @@ if (!class_exists('Help_Center_Categories_Module')) {
                             role="listbox" aria-label="Search suggestions"
                             style="display:none;"></ul>
                     </div>
-                    <button id="hcc-search-btn" class="hcc-search-btn" type="button">SEARCH</button>
+                    <button id="hcc-search-btn" class="hcc-search-btn plhSearchbarbtn" type="button">SEARCH</button>
                 </div>
-                <button id="hcc-filter-btn" class="hcc-filter-btn" type="button" aria-label="Filter">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <line x1="4" y1="6" x2="20" y2="6"></line>
-                        <line x1="7" y1="12" x2="17" y2="12"></line>
-                        <line x1="10" y1="18" x2="14" y2="18"></line>
-                    </svg>
+                <button id="hcc-filter-btn" class="hcc-filter-btn plhfilterbtn" type="button" aria-label="Filter">
+				   <img src="https://dev.opendesignsin.com/anugal-wp/wp-content/uploads/2026/02/FunnelSimple.png" alt=""/>
                 </button>
             </div>
+			
+			
             <?php
         }
 
