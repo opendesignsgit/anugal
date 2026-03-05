@@ -469,8 +469,8 @@ class Help_Center_Single_Shortcodes {
                             $parent_posts = get_posts(array(
                                 'post_type'      => 'help_center',
                                 'posts_per_page' => -1,
-                                'orderby'        => 'menu_order title',
-                                'order'          => 'ASC',
+                                'orderby'        => 'title',
+                                'order'          => 'DESC',
                                 'tax_query'      => array(array(
                                     'taxonomy' => 'help_category',
                                     'field'    => 'term_id',
