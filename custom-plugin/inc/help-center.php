@@ -466,6 +466,199 @@ function hcc_save_category_link_meta($term_id) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Drag-and-drop ordering for help_category terms
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 1. Register the order meta field
+add_action('init', 'hcc_register_category_order_meta');
+function hcc_register_category_order_meta() {
+    register_term_meta('help_category', 'help_category_order', array(
+        'type'              => 'integer',
+        'description'       => 'Display order for this category (set via drag-and-drop)',
+        'single'            => true,
+        'sanitize_callback' => 'absint',
+        'show_in_rest'      => false,
+    ));
+}
+
+// 2. Auto-assign the next available position when a term is created
+add_action('created_help_category', 'hcc_init_new_term_order');
+function hcc_init_new_term_order($term_id) {
+    if ('' !== get_term_meta($term_id, 'help_category_order', true)) return;
+    $existing = get_terms(array(
+        'taxonomy'   => 'help_category',
+        'hide_empty' => false,
+        'fields'     => 'ids',
+        'exclude'    => array($term_id),
+    ));
+    $max = -1;
+    if (!is_wp_error($existing)) {
+        foreach ($existing as $tid) {
+            $o = get_term_meta($tid, 'help_category_order', true);
+            if ($o !== '' && (int) $o > $max) $max = (int) $o;
+        }
+    }
+    update_term_meta($term_id, 'help_category_order', $max + 1);
+}
+
+// 2b. One-time migration: assign initial order to terms that pre-date this feature
+add_action('admin_init', 'hcc_maybe_init_existing_term_orders');
+function hcc_maybe_init_existing_term_orders() {
+    if (get_transient('hcc_term_order_migrated')) return;
+    $terms = get_terms(array(
+        'taxonomy'   => 'help_category',
+        'hide_empty' => false,
+        'fields'     => 'id=>name',   // lightweight — just ID + name for alpha sort
+        'number'     => 0,
+    ));
+    if (is_wp_error($terms) || empty($terms)) {
+        set_transient('hcc_term_order_migrated', 1, MONTH_IN_SECONDS);
+        return;
+    }
+    // Sort by name so the initial order is alphabetical (same as previous behaviour)
+    asort($terms);
+    $position = 0;
+    foreach (array_keys($terms) as $term_id) {
+        if ('' === get_term_meta($term_id, 'help_category_order', true)) {
+            update_term_meta($term_id, 'help_category_order', $position);
+        }
+        $position++;
+    }
+    set_transient('hcc_term_order_migrated', 1, MONTH_IN_SECONDS);
+}
+
+// 3. Add a drag-handle column to the WP admin help_category list table
+add_filter('manage_edit-help_category_columns', 'hcc_add_order_column');
+function hcc_add_order_column($columns) {
+    $reordered = array();
+    foreach ($columns as $key => $label) {
+        $reordered[$key] = $label;
+        if ($key === 'cb') {
+            $reordered['hcc_order'] = '<span class="hcc-col-order-head" title="Drag to reorder">⠿</span>';
+        }
+    }
+    return $reordered;
+}
+
+add_filter('manage_help_category_custom_column', 'hcc_render_order_column', 10, 3);
+function hcc_render_order_column($content, $column_name, $term_id) {
+    if ($column_name !== 'hcc_order') return $content;
+    return '<span class="hcc-drag-handle" data-term-id="' . esc_attr($term_id) . '" title="Drag to reorder" aria-label="Drag to reorder">⠿</span>';
+}
+
+// 4. Enqueue jQuery UI Sortable + admin styles/script on the taxonomy list page
+add_action('admin_enqueue_scripts', 'hcc_admin_enqueue_order_assets');
+function hcc_admin_enqueue_order_assets() {
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if (!$screen || $screen->base !== 'edit-tags' || $screen->taxonomy !== 'help_category') return;
+
+    wp_enqueue_script('jquery-ui-sortable');
+
+    wp_register_style('hcc-admin-order', false, array(), '1.0.0');
+    wp_enqueue_style('hcc-admin-order');
+    wp_add_inline_style('hcc-admin-order', '
+        .column-hcc_order { width: 44px; text-align: center; padding: 6px 0 !important; }
+        .hcc-col-order-head { font-size: 16px; color: #aaa; }
+        .hcc-drag-handle { cursor: grab; font-size: 22px; line-height: 1; color: #bbb; display: inline-block; user-select: none; }
+        .hcc-drag-handle:hover { color: #3E54E8; }
+        .hcc-drag-handle:active { cursor: grabbing; }
+        #the-list tr.ui-sortable-helper { background: #f0f4ff !important; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+        #the-list .ui-sortable-placeholder { visibility: visible !important; background: #e9efff; }
+    ');
+
+    wp_register_script('hcc-admin-order', false, array('jquery', 'jquery-ui-sortable'), '1.0.0', true);
+    wp_enqueue_script('hcc-admin-order');
+    wp_localize_script('hcc-admin-order', 'HCCOrder', array(
+        'ajaxUrl' => admin_url('admin-ajax.php'),
+        'nonce'   => wp_create_nonce('hcc_save_term_order'),
+        'saved'   => __('Order saved.'),
+        'error'   => __('Could not save order. Please try again.'),
+    ));
+    wp_add_inline_script('hcc-admin-order', '
+jQuery(function($){
+    var $tbody = $("#the-list");
+    if (!$tbody.length) return;
+
+    $tbody.sortable({
+        handle: ".hcc-drag-handle",
+        axis: "y",
+        placeholder: "ui-sortable-placeholder",
+        forcePlaceholderSize: true,
+        update: function() {
+            var ids = [];
+            $tbody.find("tr[id^=\'tag-\']").each(function(){
+                var tid = parseInt(this.id.replace("tag-", ""), 10);
+                if (!isNaN(tid)) ids.push(tid);
+            });
+            $.post(HCCOrder.ajaxUrl, {
+                action: "hcc_save_term_order",
+                nonce:  HCCOrder.nonce,
+                order:  ids
+            }).done(function(r){
+                if (r && r.success) {
+                    var $n = $("<div class=\'notice notice-success is-dismissible\' style=\'margin:8px 0 0\'><p>" + HCCOrder.saved + "</p></div>");
+                    $("#wpbody-content .wrap h1, #wpbody-content .wrap h2").first().after($n);
+                    setTimeout(function(){ $n.fadeOut(400, function(){ $n.remove(); }); }, 2500);
+                }
+            }).fail(function(){ alert(HCCOrder.error); });
+        }
+    }).disableSelection();
+});
+', 'after');
+}
+
+// 5. AJAX handler: persist the new term order
+add_action('wp_ajax_hcc_save_term_order', 'hcc_ajax_save_term_order');
+function hcc_ajax_save_term_order() {
+    check_ajax_referer('hcc_save_term_order', 'nonce');
+    if (!current_user_can('manage_categories')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    $order_ids = isset($_POST['order']) ? (array) $_POST['order'] : array();
+    foreach ($order_ids as $position => $term_id) {
+        $term_id = absint($term_id);
+        if ($term_id) {
+            update_term_meta($term_id, 'help_category_order', (int) $position);
+        }
+    }
+    wp_send_json_success();
+}
+
+/**
+ * Returns help_category terms sorted by the custom drag-drop order
+ * (help_category_order term meta).  Terms without an order meta are placed
+ * after ordered ones and sorted alphabetically as a tie-breaker.
+ *
+ * Sorting is done in PHP to avoid the INNER-JOIN issue that occurs when
+ * ordering by meta_value_num via WP_Term_Query (terms without the meta row
+ * would be excluded from results).
+ *
+ * @param array $extra_args  Extra args passed to get_terms(). The keys
+ *                           'orderby', 'order', and 'meta_key' are stripped
+ *                           so they don't interfere with PHP sorting.
+ * @return WP_Term[]
+ */
+function hcc_get_terms_ordered($extra_args = array()) {
+    unset($extra_args['orderby'], $extra_args['order'], $extra_args['meta_key']);
+    $args = wp_parse_args($extra_args, array(
+        'taxonomy'   => 'help_category',
+        'hide_empty' => false,
+    ));
+    $terms = get_terms($args);
+    if (is_wp_error($terms) || empty($terms)) return array();
+    usort($terms, function($a, $b) {
+        $oa = get_term_meta($a->term_id, 'help_category_order', true);
+        $ob = get_term_meta($b->term_id, 'help_category_order', true);
+        $ia = ($oa !== '') ? (int) $oa : PHP_INT_MAX;
+        $ib = ($ob !== '') ? (int) $ob : PHP_INT_MAX;
+        if ($ia === $ib) return strcmp($a->name, $b->name);
+        return $ia - $ib;
+    });
+    return $terms;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // [help_center_categories] shortcode
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -499,20 +692,15 @@ if (!class_exists('Help_Center_Categories_Module')) {
         public function shortcode($atts = array()) {
             $atts = shortcode_atts(array(
                 'parent'       => 0,
-                'orderby'      => 'name',
-                'order'        => 'ASC',
                 'hide_empty'   => 'false',
                 'explore_text' => 'EXPLORE MORE',
             ), $atts, 'help_center_categories');
 
             $this->enqueue_assets();
 
-            $terms = get_terms(array(
-                'taxonomy'   => 'help_category',
+            $terms = hcc_get_terms_ordered(array(
                 'hide_empty' => $atts['hide_empty'] === 'true',
                 'parent'     => (int) $atts['parent'],
-                'orderby'    => sanitize_key($atts['orderby']),
-                'order'      => in_array(strtoupper($atts['order']), array('ASC', 'DESC')) ? strtoupper($atts['order']) : 'ASC',
             ));
 
             $explore_text = esc_html($atts['explore_text']);
@@ -522,7 +710,7 @@ if (!class_exists('Help_Center_Categories_Module')) {
 
                 <?php $this->render_search_bar(); ?>
 
-                <?php if (!empty($terms) && !is_wp_error($terms)): ?>
+                <?php if (!empty($terms)): ?>
                     <div class="hcc-grid">
                         <?php foreach ($terms as $term):
                             $meta_link   = get_term_meta($term->term_id, 'help_category_link', true);

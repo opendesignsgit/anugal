@@ -49,15 +49,12 @@ class Help_Center_Single_Shortcodes {
 
         $current_post_id = get_the_ID();
         
-        // Get all help_category terms ordered by menu order or name
-        $categories = get_terms(array(
-            'taxonomy'   => 'help_category',
+        // Get all help_category terms sorted by custom drag-drop order
+        $categories = hcc_get_terms_ordered(array(
             'hide_empty' => true,
-            'orderby'    => 'name',
-            'order'      => 'ASC',
         ));
 
-        if (empty($categories) || is_wp_error($categories)) {
+        if (empty($categories)) {
             return '<div class="hcs-sidebar"><p>No categories found.</p></div>';
         }
 
@@ -337,16 +334,13 @@ class Help_Center_Single_Shortcodes {
             $current_term_ids = array();
         }
 
-        // Get all top-level (parent = 0) categories
-        $parent_terms = get_terms(array(
-            'taxonomy'   => 'help_category',
+        // Get all top-level (parent = 0) categories sorted by custom drag-drop order
+        $parent_terms = hcc_get_terms_ordered(array(
             'hide_empty' => true,
             'parent'     => 0,
-            'orderby'    => 'name',
-            'order'      => 'ASC',
         ));
 
-        if (empty($parent_terms) || is_wp_error($parent_terms)) {
+        if (empty($parent_terms)) {
             return '<nav class="hcn-toc"><p class="hcn-toc__empty">No categories found.</p></nav>';
         }
 
@@ -357,17 +351,11 @@ class Help_Center_Single_Shortcodes {
         <nav class="hcn-toc<?php echo $is_sticky ? ' hcn-toc--sticky' : ''; ?>">
             <?php foreach ($parent_terms as $parent):
 
-                // Get child categories under this parent
-                $children = get_terms(array(
-                    'taxonomy'   => 'help_category',
+                // Get child categories sorted by custom drag-drop order
+                $children = hcc_get_terms_ordered(array(
                     'hide_empty' => true,
                     'parent'     => $parent->term_id,
-                    'orderby'    => 'name',
-                    'order'      => 'ASC',
                 ));
-                if (is_wp_error($children)) {
-                    $children = array();
-                }
 
                 // Determine whether this section should be open:
                 // open if current post is in the parent term or any of its children
