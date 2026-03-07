@@ -152,7 +152,7 @@ if (!class_exists('Solution_Briefs_Module')) {
                 </div>
             </section>
             <?php endif; ?>
-            <section id="solution-briefs-module" class="sb-wrap" data-sb-init="0">
+            <section id="solution-briefs-module" class="sb-wrap postlistModels" data-sb-init="0">
                 <div class="sb-header postlistHead">
                     <div class="sb-header__text comtitlestb plhText">
                         <h2 class="sb-title plhTitle">
