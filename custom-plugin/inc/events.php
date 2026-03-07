@@ -98,6 +98,7 @@ if (!class_exists('Events_Module')) {
                 'excerpt_length'        => 120,
                 'category'              => '',
                 'featured_post_id'      => 0,
+                'show_featured'         => 1,
                 'show_featured_in_list' => 0,
             ), $atts, 'events');
 
@@ -106,8 +107,8 @@ if (!class_exists('Events_Module')) {
             wp_enqueue_style('events-inline-style');
             wp_add_inline_style('events-inline-style', $this->inline_css());
 
-            // Get featured post
-            $featured_post = $this->get_featured_post((int) $atts['featured_post_id']);
+            // Get featured post (only when the featured section is enabled)
+            $featured_post = ((int) $atts['show_featured'] !== 0) ? $this->get_featured_post((int) $atts['featured_post_id']) : null;
 
             // Scripts
             wp_register_script('events-inline-script', false, array(), '1.0.1', true);
