@@ -92,13 +92,15 @@ if (!class_exists('Solution_Briefs_Module')) {
 
         public function shortcode($atts = array()) {
             $atts = shortcode_atts(array(
-                'title'            => 'Recent',
-                'title_accent'     => 'Solution Briefs',
-                'subtitle'         => 'Discover concise overviews of our solutions and how they address your business challenges.',
-                'per_page'         => 6,
-                'excerpt_length'   => 120,
-                'category'         => '',
-                'featured_post_id' => 0,
+                'title'                 => 'Recent',
+                'title_accent'          => 'Solution Briefs',
+                'subtitle'              => 'Discover concise overviews of our solutions and how they address your business challenges.',
+                'per_page'              => 6,
+                'excerpt_length'        => 120,
+                'category'              => '',
+                'featured_post_id'      => 0,
+                'show_featured'         => 1,
+                'show_featured_in_list' => 0,
             ), $atts, 'solution_briefs');
 
             // Styles
@@ -106,8 +108,8 @@ if (!class_exists('Solution_Briefs_Module')) {
             wp_enqueue_style('solution-briefs-inline-style');
             wp_add_inline_style('solution-briefs-inline-style', $this->inline_css());
 
-            // Get featured post
-            $featured_post = $this->get_featured_post((int) $atts['featured_post_id']);
+            // Get featured post (only when the featured section is enabled)
+            $featured_post = ((int) $atts['show_featured'] !== 0) ? $this->get_featured_post((int) $atts['featured_post_id']) : null;
 
             // Scripts
             wp_register_script('solution-briefs-inline-script', false, array(), '1.0.1', true);
@@ -120,7 +122,7 @@ if (!class_exists('Solution_Briefs_Module')) {
                 'perPage'       => max(1, (int) $atts['per_page']),
                 'excerptLength' => max(1, (int) $atts['excerpt_length']),
                 'category'      => sanitize_text_field($atts['category']),
-                'excludePostId' => $featured_post ? $featured_post['id'] : 0,
+                'excludePostId' => ($featured_post && !((int) $atts['show_featured_in_list'])) ? $featured_post['id'] : 0,
                 'taxRestBase'   => 'solution_brief_category',
             );
             wp_add_inline_script('solution-briefs-inline-script', 'window.SolutionBriefsData = ' . wp_json_encode($data) . ';', 'before');
@@ -150,7 +152,7 @@ if (!class_exists('Solution_Briefs_Module')) {
                 </div>
             </section>
             <?php endif; ?>
-            <section id="solution-briefs-module" class="sb-wrap" data-sb-init="0">
+            <section id="solution-briefs-module" class="sb-wrap postlistModels" data-sb-init="0">
                 <div class="sb-header postlistHead">
                     <div class="sb-header__text comtitlestb plhText">
                         <h2 class="sb-title plhTitle">

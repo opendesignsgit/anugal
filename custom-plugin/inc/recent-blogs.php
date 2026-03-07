@@ -21,10 +21,12 @@ if (!class_exists('Recent_Blogs_Module')) {
 
         public function shortcode($atts = array()) {
             $atts = shortcode_atts(array(
-                'title'            => 'Recent',
-                'subtitle'         => 'Browse through our recent thoughts and expert perspectives on identity and access management.',
-                'per_page'         => 6,
-                'featured_post_id' => 0, // 0 = auto (most recent), or specific post ID
+                'title'                 => 'Recent',
+                'subtitle'              => 'Browse through our recent thoughts and expert perspectives on identity and access management.',
+                'per_page'              => 6,
+                'featured_post_id'      => 0, // 0 = auto (most recent), or specific post ID
+                'show_featured'         => 1,
+                'show_featured_in_list' => 0,
             ), $atts, 'recent_blogs');
 
             // Styles
@@ -32,8 +34,8 @@ if (!class_exists('Recent_Blogs_Module')) {
             wp_enqueue_style('recent-blogs-inline-style');
             wp_add_inline_style('recent-blogs-inline-style', $this->inline_css());
 
-            // Get featured post
-            $featured_post = $this->get_featured_post((int) $atts['featured_post_id']);
+            // Get featured post (only when the featured section is enabled)
+            $featured_post = ((int) $atts['show_featured'] !== 0) ? $this->get_featured_post((int) $atts['featured_post_id']) : null;
             
             // Scripts
             wp_register_script('recent-blogs-inline-script', false, array(), '1.0.5', true);
@@ -44,7 +46,7 @@ if (!class_exists('Recent_Blogs_Module')) {
                 'siteUrl'       => home_url(),                                 // e.g. https://domain/subdir
                 'ajaxUrl'       => admin_url('admin-ajax.php'),                // fallback endpoint
                 'perPage'       => max(1, (int) $atts['per_page']),
-                'excludePostId' => $featured_post ? $featured_post['id'] : 0,  // Exclude featured post from grid
+                'excludePostId' => ($featured_post && !((int) $atts['show_featured_in_list'])) ? $featured_post['id'] : 0,  // Exclude featured post from grid
             );
             wp_add_inline_script('recent-blogs-inline-script', 'window.RecentBlogsData = ' . wp_json_encode($data) . ';', 'before');
             wp_add_inline_script('recent-blogs-inline-script', $this->inline_js(), 'after');

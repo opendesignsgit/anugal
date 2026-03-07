@@ -125,13 +125,15 @@ if (!class_exists('Webinars_Module')) {
 
         public function shortcode($atts = array()) {
             $atts = shortcode_atts(array(
-                'title'            => 'Recent',
-                'title_accent'     => 'Webinars',
-                'subtitle'         => 'Watch our on-demand webinars and register for upcoming sessions to deepen your knowledge.',
-                'per_page'         => 6,
-                'excerpt_length'   => 120,
-                'category'         => '',
-                'featured_post_id' => 0,
+                'title'                 => 'Recent',
+                'title_accent'          => 'Webinars',
+                'subtitle'              => 'Watch our on-demand webinars and register for upcoming sessions to deepen your knowledge.',
+                'per_page'              => 6,
+                'excerpt_length'        => 120,
+                'category'              => '',
+                'featured_post_id'      => 0,
+                'show_featured'         => 1,
+                'show_featured_in_list' => 0,
             ), $atts, 'webinars');
 
             // Styles
@@ -139,8 +141,8 @@ if (!class_exists('Webinars_Module')) {
             wp_enqueue_style('webinars-inline-style');
             wp_add_inline_style('webinars-inline-style', $this->inline_css());
 
-            // Get featured post
-            $featured_post = $this->get_featured_post((int) $atts['featured_post_id']);
+            // Get featured post (only when the featured section is enabled)
+            $featured_post = ((int) $atts['show_featured'] !== 0) ? $this->get_featured_post((int) $atts['featured_post_id']) : null;
 
             // Scripts
             wp_register_script('webinars-inline-script', false, array(), '1.0.1', true);
@@ -153,7 +155,7 @@ if (!class_exists('Webinars_Module')) {
                 'perPage'       => max(1, (int) $atts['per_page']),
                 'excerptLength' => max(1, (int) $atts['excerpt_length']),
                 'category'      => sanitize_text_field($atts['category']),
-                'excludePostId' => $featured_post ? $featured_post['id'] : 0,
+                'excludePostId' => ($featured_post && !((int) $atts['show_featured_in_list'])) ? $featured_post['id'] : 0,
             );
             wp_add_inline_script('webinars-inline-script', 'window.WebinarsData = ' . wp_json_encode($data) . ';', 'before');
             wp_add_inline_script('webinars-inline-script', $this->inline_js(), 'after');
