@@ -92,13 +92,14 @@ if (!class_exists('Solution_Briefs_Module')) {
 
         public function shortcode($atts = array()) {
             $atts = shortcode_atts(array(
-                'title'            => 'Recent',
-                'title_accent'     => 'Solution Briefs',
-                'subtitle'         => 'Discover concise overviews of our solutions and how they address your business challenges.',
-                'per_page'         => 6,
-                'excerpt_length'   => 120,
-                'category'         => '',
-                'featured_post_id' => 0,
+                'title'                 => 'Recent',
+                'title_accent'          => 'Solution Briefs',
+                'subtitle'              => 'Discover concise overviews of our solutions and how they address your business challenges.',
+                'per_page'              => 6,
+                'excerpt_length'        => 120,
+                'category'              => '',
+                'featured_post_id'      => 0,
+                'show_featured_in_list' => 0,
             ), $atts, 'solution_briefs');
 
             // Styles
@@ -120,7 +121,7 @@ if (!class_exists('Solution_Briefs_Module')) {
                 'perPage'       => max(1, (int) $atts['per_page']),
                 'excerptLength' => max(1, (int) $atts['excerpt_length']),
                 'category'      => sanitize_text_field($atts['category']),
-                'excludePostId' => $featured_post ? $featured_post['id'] : 0,
+                'excludePostId' => ($featured_post && !((int) $atts['show_featured_in_list'])) ? $featured_post['id'] : 0,
                 'taxRestBase'   => 'solution_brief_category',
             );
             wp_add_inline_script('solution-briefs-inline-script', 'window.SolutionBriefsData = ' . wp_json_encode($data) . ';', 'before');

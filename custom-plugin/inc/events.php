@@ -91,13 +91,14 @@ if (!class_exists('Events_Module')) {
 
         public function shortcode($atts = array()) {
             $atts = shortcode_atts(array(
-                'title'            => 'Upcoming',
-                'title_accent'     => 'Events',
-                'subtitle'         => 'Join us at our upcoming events, conferences and meetups to connect and learn.',
-                'per_page'         => 6,
-                'excerpt_length'   => 120,
-                'category'         => '',
-                'featured_post_id' => 0,
+                'title'                 => 'Upcoming',
+                'title_accent'          => 'Events',
+                'subtitle'              => 'Join us at our upcoming events, conferences and meetups to connect and learn.',
+                'per_page'              => 6,
+                'excerpt_length'        => 120,
+                'category'              => '',
+                'featured_post_id'      => 0,
+                'show_featured_in_list' => 0,
             ), $atts, 'events');
 
             // Styles
@@ -119,7 +120,7 @@ if (!class_exists('Events_Module')) {
                 'perPage'       => max(1, (int) $atts['per_page']),
                 'excerptLength' => max(1, (int) $atts['excerpt_length']),
                 'category'      => sanitize_text_field($atts['category']),
-                'excludePostId' => $featured_post ? $featured_post['id'] : 0,
+                'excludePostId' => ($featured_post && !((int) $atts['show_featured_in_list'])) ? $featured_post['id'] : 0,
             );
             wp_add_inline_script('events-inline-script', 'window.EventsData = ' . wp_json_encode($data) . ';', 'before');
             wp_add_inline_script('events-inline-script', $this->inline_js(), 'after');
